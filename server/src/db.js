@@ -1,8 +1,12 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 
 const schema = readFileSync(new URL('./schema.sql', import.meta.url), 'utf8');
+
+export const databasePath =
+  process.env.DATABASE_PATH ?? fileURLToPath(new URL('../data/skincare.db', import.meta.url));
 
 export function openDatabase(path) {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });

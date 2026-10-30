@@ -23,3 +23,4 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - Client refetches the product list after each change instead of mirroring the API's sort order in JS.
 - Ingredients form splits on newlines and commas, but keeps commas between digits (1,2-hexanediol).
 - Category is free text with suggestions, matching the API, rather than a fixed list.
+- K-beauty seed data is an explicit `npm run seed`, not run on startup, so deleted products don't return. It lists key ingredients only.

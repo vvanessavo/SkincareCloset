@@ -4,6 +4,7 @@ import { toFormValues, toProductPayload } from '../productFields.js';
 const CATEGORIES = [
   'cleanser',
   'toner',
+  'essence',
   'serum',
   'treatment',
   'moisturizer',
