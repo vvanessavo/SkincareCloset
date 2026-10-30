@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS daily_logs (
   log_date    TEXT NOT NULL UNIQUE, -- YYYY-MM-DD
   skin_rating INTEGER CHECK (skin_rating BETWEEN 1 AND 5),
   notes       TEXT,
+  is_complete INTEGER NOT NULL DEFAULT 0, -- stored so the streak outlives routine edits
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

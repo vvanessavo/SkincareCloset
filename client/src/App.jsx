@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { ProductLibrary } from './components/ProductLibrary.jsx';
 import { RoutineBuilder } from './components/RoutineBuilder.jsx';
+import { TodayChecklist } from './components/TodayChecklist.jsx';
 import { confirmDiscard } from './unsavedChanges.js';
 
 const PAGES = [
   { name: 'Routines', hash: '#routines', Page: RoutineBuilder },
+  { name: 'Today', hash: '#today', Page: TodayChecklist },
   { name: 'Products', hash: '#products', Page: ProductLibrary },
 ];
 

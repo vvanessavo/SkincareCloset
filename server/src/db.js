@@ -11,6 +11,12 @@ export const databasePath =
 // Next to the database, so a different database never shares pictures with this one.
 export const uploadsPath = join(dirname(databasePath), 'uploads');
 
+const ADDED_COLUMNS = [
+  ['products', 'image', 'TEXT'],
+  ['products', 'catalog_code', 'TEXT'],
+  ['daily_logs', 'is_complete', 'INTEGER NOT NULL DEFAULT 0'],
+];
+
 export function openDatabase(path) {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
 
@@ -20,9 +26,11 @@ export function openDatabase(path) {
   db.exec(schema);
 
   // CREATE TABLE IF NOT EXISTS leaves existing tables as they are.
-  const columns = db.pragma('table_info(products)').map((column) => column.name);
-  for (const column of ['image', 'catalog_code']) {
-    if (!columns.includes(column)) db.exec(`ALTER TABLE products ADD COLUMN ${column} TEXT`);
+  for (const [table, column, definition] of ADDED_COLUMNS) {
+    const columns = db.pragma(`table_info(${table})`).map((info) => info.name);
+    if (!columns.includes(column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
   }
 
   return db;

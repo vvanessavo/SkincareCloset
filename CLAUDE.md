@@ -5,7 +5,7 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - [x] 1. Express API, SQLite schema, product CRUD + tests
 - [x] 2. React frontend: product library + add/edit form, proxy /api to :3001
 - [x] 3. Routines API + routine builder UI (AM/PM, ordered steps)
-- [ ] 4. Today's checklist + streak counter (consider soft-deleting steps)
+- [x] 4. Today's checklist + streak counter (consider soft-deleting steps)
 - [ ] 5. Skin log (daily note + 1-5 rating)
 - [ ] 6. Ingredient conflict checker (retinol + vitamin C, retinol + AHA/BHA) with unit tests
 - [ ] 7. Expiry warnings + progress chart (Chart.js)
@@ -25,7 +25,11 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - Category is free text with suggestions, matching the API, rather than a fixed list.
 - K-beauty seed data is an explicit `npm run seed`, not run on startup, so deleted products don't return. It lists key ingredients only.
 - Routine steps are added, removed and reordered individually, never replaced in bulk, so step ids stay stable for step_completions.
-- Removing a step or deleting a routine is a hard delete for now and cascades to step_completions. Revisit in step 4 (soft delete).
+- Steps are not soft-deleted. Each day's result is stored as daily_logs.is_complete instead, so edits can't rewrite past streak days, and no step query needs a removed filter or leaves a product undeletable. Removing a step still deletes its step_completions, so step 7 has per-step history only for steps that still exist.
+- A day counts when each time of day that has steps has one fully ticked routine, so routines can alternate (retinol night or acid night).
+- An unfinished today doesn't break the streak until the day is over.
+- The client sends today's date, because "today" depends on the browser's time zone. Fetching the checklist refreshes that date's stored result, so the UI only ever fetches today.
+- Today is the second tab; Routines stays the default page.
 - Steps reorder with up/down buttons rather than drag and drop: no dependency, and works by keyboard.
 - The current tab lives in the URL hash via replaceState, so reloads keep it and Back can't skip the unsaved-changes check.
 - Product pictures are uploads, stored in an uploads folder next to the database (gitignored, so back it up with the db). Type is checked from the bytes; JPEG, PNG and WebP only, 5 MB max.

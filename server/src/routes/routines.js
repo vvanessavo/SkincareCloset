@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { imageUrl } from '../images.js';
+import { createStepReader } from '../routineSteps.js';
 
 const PERIODS = ['AM', 'PM'];
 
@@ -32,13 +32,7 @@ export function routinesRouter(db) {
   const update = db.prepare('UPDATE routines SET name = @name, period = @period WHERE id = @id');
   const remove = db.prepare('DELETE FROM routines WHERE id = ?');
 
-  const selectSteps = db.prepare(`
-    SELECT s.id, p.id AS product_id, p.name, p.brand, p.category, p.image
-    FROM routine_steps s
-    JOIN products p ON p.id = s.product_id
-    WHERE s.routine_id = ?
-    ORDER BY s.position, s.id
-  `);
+  const readSteps = createStepReader(db);
   const selectProduct = db.prepare('SELECT 1 FROM products WHERE id = ?');
   const insertStep = db.prepare(`
     INSERT INTO routine_steps (routine_id, product_id, position)
@@ -53,19 +47,8 @@ export function routinesRouter(db) {
     stepIds.forEach((stepId, index) => moveStep.run(index + 1, stepId));
   });
 
-  // Array order is the step order, so positions stay internal.
   function serialize(routine) {
-    const steps = selectSteps.all(routine.id).map((step) => ({
-      id: step.id,
-      product: {
-        id: step.product_id,
-        name: step.name,
-        brand: step.brand,
-        category: step.category,
-        image_url: imageUrl(step.image),
-      },
-    }));
-    return { ...routine, steps };
+    return { ...routine, steps: readSteps(routine.id) };
   }
 
   router.param('id', (req, res, next, id) => {
@@ -116,7 +99,7 @@ export function routinesRouter(db) {
   // Steps keep their ids when reordered so completions can reference them.
   router.put('/:id/steps/order', (req, res) => {
     const stepIds = req.body?.step_ids;
-    const currentIds = selectSteps.all(req.routine.id).map((step) => step.id);
+    const currentIds = readSteps(req.routine.id).map((step) => step.id);
     const isSameSteps =
       Array.isArray(stepIds) &&
       stepIds.length === currentIds.length &&

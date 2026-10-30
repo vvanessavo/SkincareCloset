@@ -637,8 +637,9 @@ describe('App', () => {
       render(<App />);
 
       expect(screen.getByRole('heading', { name: 'Routines' })).toBeTruthy();
-      expect(screen.getAllByRole('button').slice(0, 2).map((tab) => tab.textContent)).toEqual([
+      expect(screen.getAllByRole('button').slice(0, 3).map((tab) => tab.textContent)).toEqual([
         'Routines',
+        'Today',
         'Products',
       ]);
     });

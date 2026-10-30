@@ -48,6 +48,14 @@ export function searchCatalog(query, signal) {
   return request(`/catalog/search?q=${encodeURIComponent(query)}`, { signal });
 }
 
+export function getChecklist(date) {
+  return request(`/checklist?date=${date}`);
+}
+
+export function setStepDone(date, stepId, done) {
+  return request(`/checklist/${date}/steps/${stepId}`, { method: 'PUT', body: { done } });
+}
+
 export function listRoutines() {
   return request('/routines');
 }
