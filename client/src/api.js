@@ -56,6 +56,14 @@ export function setStepDone(date, stepId, done) {
   return request(`/checklist/${date}/steps/${stepId}`, { method: 'PUT', body: { done } });
 }
 
+export function listLogs() {
+  return request('/logs');
+}
+
+export function saveLog(date, log) {
+  return request(`/logs/${date}`, { method: 'PUT', body: log });
+}
+
 export function listRoutines() {
   return request('/routines');
 }

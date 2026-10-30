@@ -20,6 +20,10 @@ export function useUnsavedChanges(isDirty) {
   }, [isDirty]);
 }
 
+export function hasUnsavedChanges() {
+  return dirtyForms > 0;
+}
+
 export function confirmDiscard() {
-  return dirtyForms === 0 || window.confirm('Discard unsaved changes?');
+  return !hasUnsavedChanges() || window.confirm('Discard unsaved changes?');
 }

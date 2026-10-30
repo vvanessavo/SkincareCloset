@@ -6,7 +6,7 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - [x] 2. React frontend: product library + add/edit form, proxy /api to :3001
 - [x] 3. Routines API + routine builder UI (AM/PM, ordered steps)
 - [x] 4. Today's checklist + streak counter (consider soft-deleting steps)
-- [ ] 5. Skin log (daily note + 1-5 rating)
+- [x] 5. Skin log (daily note + 1-5 rating)
 - [ ] 6. Ingredient conflict checker (retinol + vitamin C, retinol + AHA/BHA) with unit tests
 - [ ] 7. Expiry warnings + progress chart (Chart.js)
 - [ ] 8. README with setup, screenshots, design decisions
@@ -30,6 +30,8 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - An unfinished today doesn't break the streak until the day is over.
 - The client sends today's date, because "today" depends on the browser's time zone. Fetching the checklist refreshes that date's stored result, so the UI only ever fetches today.
 - Today is the second tab; Routines stays the default page.
+- Skin log entries live on daily_logs with the checklist, so saving always updates in place and clearing means setting both fields to null. Never delete a daily_logs row: it cascades to that day's ticks.
+- Past days can be logged or edited from the skin log, but future dates can't be picked.
 - Steps reorder with up/down buttons rather than drag and drop: no dependency, and works by keyboard.
 - The current tab lives in the URL hash via replaceState, so reloads keep it and Back can't skip the unsaved-changes check.
 - Product pictures are uploads, stored in an uploads folder next to the database (gitignored, so back it up with the db). Type is checked from the bytes; JPEG, PNG and WebP only, 5 MB max.
