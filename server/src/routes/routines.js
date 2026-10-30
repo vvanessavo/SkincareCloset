@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { checkConflicts } from '../conflicts.js';
 import { createStepReader } from '../routineSteps.js';
 
 const PERIODS = ['AM', 'PM'];
@@ -48,7 +49,8 @@ export function routinesRouter(db) {
   });
 
   function serialize(routine) {
-    return { ...routine, steps: readSteps(routine.id) };
+    const steps = readSteps(routine.id);
+    return { ...routine, steps, ...checkConflicts(steps.map((step) => step.product)) };
   }
 
   router.param('id', (req, res, next, id) => {

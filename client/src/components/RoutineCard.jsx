@@ -100,6 +100,31 @@ export function RoutineCard({
         <p className="step-empty">No steps yet.</p>
       )}
 
+      {routine.conflicts.length > 0 && (
+        <ul className="conflict-list">
+          {routine.conflicts.map((conflict) => (
+            <li key={conflict.id} className="conflict">
+              <p className="conflict-title">
+                <span aria-hidden="true">⚠</span> Possible conflict: {conflict.title}
+              </p>
+              <p>
+                {conflict.products
+                  .map((product) => `${product.name} (${product.ingredient})`)
+                  .join(', ')}
+              </p>
+              <p className="conflict-advice">{conflict.advice}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {routine.unchecked.length > 0 && (
+        <p className="step-empty">
+          Not checked for conflicts, no ingredient list:{' '}
+          {routine.unchecked.map((product) => product.name).join(', ')}
+        </p>
+      )}
+
       {products.length > 0 ? (
         <form className="step-form" onSubmit={handleAddStep}>
           <select

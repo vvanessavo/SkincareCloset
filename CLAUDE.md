@@ -7,7 +7,7 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - [x] 3. Routines API + routine builder UI (AM/PM, ordered steps)
 - [x] 4. Today's checklist + streak counter (consider soft-deleting steps)
 - [x] 5. Skin log (daily note + 1-5 rating)
-- [ ] 6. Ingredient conflict checker (retinol + vitamin C, retinol + AHA/BHA) with unit tests
+- [x] 6. Ingredient conflict checker (retinol + vitamin C, retinol + AHA/BHA) with unit tests
 - [ ] 7. Expiry warnings + progress chart (Chart.js)
 - [ ] 8. README with setup, screenshots, design decisions
 
@@ -30,6 +30,9 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - An unfinished today doesn't break the streak until the day is over.
 - The client sends today's date, because "today" depends on the browser's time zone. Fetching the checklist refreshes that date's stored result, so the UI only ever fetches today.
 - Today is the second tab; Routines stays the default page.
+- Conflicts compare different products in the same routine only. Using actives at different times of day is the usual advice, and a single formula with both was made to work together.
+- Conflict matching is deliberately narrow (see the comment in conflicts.js) and was tuned against the real catalog. Exfoliating acids and vitamin C in the last third of a full label count as traces. Retinoids never do, since they work at around 0.1%.
+- Conflicts are warnings, never blocks. Products with no ingredient list are named as not checked, so silence isn't read as safe.
 - The percent counts the furthest routine per time of day, not every routine, so an untouched alternate can't hold a finished day below 100%. It rounds down, so 100% always means the day counted.
 - daily_logs also stores steps_done and steps_total, so the calendar keeps past percentages after routines change. Step 7's chart should read these, not step_completions.
 - The progress ring and calendar live on the Today tab rather than a fifth tab, so ticks update them in place.

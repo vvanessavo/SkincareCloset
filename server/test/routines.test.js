@@ -104,9 +104,69 @@ describe('/api/routines', () => {
       name: 'Serum',
       brand: 'Acme',
       category: null,
+      ingredients: [],
       image_url: null,
     });
     assert.deepEqual(await stepProductNames(), ['Cleanser', 'Serum']);
+  });
+
+  it('reports conflicts between products in the same routine', async () => {
+    const { body: retinol } = await api
+      .post('/api/products')
+      .send({ name: 'Retinol Cream', ingredients: ['water', 'retinol'] });
+    const { body: vitaminC } = await api
+      .post('/api/products')
+      .send({ name: 'C Serum', ingredients: ['ascorbic acid'] });
+    await addStep(retinol.id);
+    await addStep(vitaminC.id);
+    await addStep(cleanser.id);
+
+    const { body } = await api.get(`/api/routines/${routine.id}`).expect(200);
+
+    assert.deepEqual(
+      body.conflicts.map((conflict) => conflict.id),
+      ['retinoid-vitamin-c'],
+    );
+    assert.deepEqual(body.unchecked, [{ id: cleanser.id, name: 'Cleanser' }]);
+  });
+
+  it('does not report conflicts across separate routines', async () => {
+    const { body: retinol } = await api
+      .post('/api/products')
+      .send({ name: 'Retinol Cream', ingredients: ['retinol'] });
+    const { body: vitaminC } = await api
+      .post('/api/products')
+      .send({ name: 'C Serum', ingredients: ['ascorbic acid'] });
+    const { body: evening } = await api.post('/api/routines').send({ name: 'PM', period: 'PM' });
+    await addStep(vitaminC.id);
+    await api.post(`/api/routines/${evening.id}/steps`).send({ product_id: retinol.id }).expect(201);
+
+    const { body } = await api.get('/api/routines').expect(200);
+
+    assert.deepEqual(body.flatMap((item) => item.conflicts), []);
+  });
+
+  it('updates conflicts when a step is removed or a product is edited', async () => {
+    const { body: retinol } = await api
+      .post('/api/products')
+      .send({ name: 'Retinol Cream', ingredients: ['retinol'] });
+    const { body: acid } = await api
+      .post('/api/products')
+      .send({ name: 'Peel', ingredients: ['glycolic acid'] });
+    await addStep(retinol.id);
+    const acidStep = await addStep(acid.id);
+
+    const get = async () => (await api.get(`/api/routines/${routine.id}`)).body;
+    assert.equal((await get()).conflicts.length, 1);
+
+    await api.put(`/api/products/${acid.id}`).send({ name: 'Peel', ingredients: ['water'] });
+    assert.equal((await get()).conflicts.length, 0);
+
+    await api.put(`/api/products/${acid.id}`).send({ name: 'Peel', ingredients: ['lactic acid'] });
+    assert.equal((await get()).conflicts.length, 1);
+
+    await api.delete(`/api/routines/${routine.id}/steps/${acidStep.id}`).expect(200);
+    assert.equal((await get()).conflicts.length, 0);
   });
 
   it('allows the same product twice in a routine', async () => {

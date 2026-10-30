@@ -9,6 +9,8 @@
   --accent-text: #ffffff;
   --error: #a3312a;
   --error-bg: #fbeceb;
+  --warning-bg: #fbf1da;
+  --warning-border: #e3c67f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +24,8 @@
     --accent-text: #15211e;
     --error: #f0a8a2;
     --error-bg: #3a2220;
+    --warning-bg: #372d19;
+    --warning-border: #6e5a2c;
   }
 }
 
@@ -813,6 +817,32 @@ textarea {
 .step-empty {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.conflict-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conflict {
+  padding: 0.6rem 0.7rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.conflict-title {
+  font-weight: 600;
+}
+
+.conflict-advice {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .step-form {

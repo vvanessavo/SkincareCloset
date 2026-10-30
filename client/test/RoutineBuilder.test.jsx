@@ -16,8 +16,10 @@ const morning = {
     { id: 101, product: serum },
     { id: 102, product: toner },
   ],
+  conflicts: [],
+  unchecked: [],
 };
-const evening = { id: 11, name: 'Wind down', period: 'PM', steps: [] };
+const evening = { id: 11, name: 'Wind down', period: 'PM', steps: [], conflicts: [], unchecked: [] };
 
 function jsonResponse(status, body) {
   return new Response(status === 204 ? null : JSON.stringify(body), { status });
@@ -100,6 +102,48 @@ describe('RoutineBuilder', () => {
     const image = await screen.findByRole('img', { name: serum.name });
 
     expect(image.getAttribute('src')).toBe(pictured.image_url);
+  });
+
+  it('shows a conflict with its products and advice', async () => {
+    const user = userEvent.setup();
+    const conflict = {
+      id: 'retinoid-vitamin-c',
+      title: 'Retinoid + vitamin C',
+      advice: 'Try different times of day.',
+      products: [
+        { id: 1, name: 'Retinol Cream', ingredient: 'retinol' },
+        { id: 2, name: 'C Serum', ingredient: 'ascorbic acid' },
+      ],
+    };
+    mockApi({ routines: [{ ...morning, conflicts: [conflict] }, evening] });
+    await openRoutines(user);
+
+    expect(await screen.findByText(/Possible conflict: Retinoid \+ vitamin C/)).toBeTruthy();
+    expect(screen.getByText('Retinol Cream (retinol), C Serum (ascorbic acid)')).toBeTruthy();
+    expect(screen.getByText('Try different times of day.')).toBeTruthy();
+  });
+
+  it('shows no warning for a routine without conflicts', async () => {
+    const user = userEvent.setup();
+    mockApi({});
+    await openRoutines(user);
+
+    await screen.findByRole('heading', { name: 'Daily' });
+
+    expect(screen.queryByText(/Possible conflict/)).toBeNull();
+    expect(screen.queryByText(/Not checked/)).toBeNull();
+  });
+
+  it('says which products could not be checked', async () => {
+    const user = userEvent.setup();
+    const unchecked = [
+      { id: 1, name: 'Cleanser' },
+      { id: 2, name: 'Serum' },
+    ];
+    mockApi({ routines: [{ ...morning, unchecked }] });
+    await openRoutines(user);
+
+    expect(await screen.findByText(/no ingredient list: Cleanser, Serum/)).toBeTruthy();
   });
 
   it('shows empty states', async () => {
