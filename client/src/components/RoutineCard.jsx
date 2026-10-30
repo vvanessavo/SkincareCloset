@@ -1,0 +1,124 @@
+import { useState } from 'react';
+import { RoutineForm } from './RoutineForm.jsx';
+
+function productLabel(product) {
+  return product.brand ? `${product.name} (${product.brand})` : product.name;
+}
+
+export function RoutineCard({
+  routine,
+  products,
+  busy,
+  onUpdate,
+  onDelete,
+  onAddStep,
+  onRemoveStep,
+  onReorderSteps,
+}) {
+  const [editing, setEditing] = useState(false);
+  const [productId, setProductId] = useState('');
+  const { steps } = routine;
+
+  function moveStep(index, offset) {
+    const stepIds = steps.map((step) => step.id);
+    const [stepId] = stepIds.splice(index, 1);
+    stepIds.splice(index + offset, 0, stepId);
+    onReorderSteps(routine, stepIds);
+  }
+
+  async function handleUpdate(values) {
+    await onUpdate(routine, values);
+    setEditing(false);
+  }
+
+  function handleAddStep(event) {
+    event.preventDefault();
+    onAddStep(routine, Number(productId));
+    setProductId('');
+  }
+
+  return (
+    <li className="panel routine-card">
+      {editing ? (
+        <RoutineForm routine={routine} onSave={handleUpdate} onCancel={() => setEditing(false)} />
+      ) : (
+        <div className="routine-heading">
+          <h3>{routine.name}</h3>
+          <div className="card-actions">
+            <button type="button" aria-label={`Rename ${routine.name}`} onClick={() => setEditing(true)}>
+              Edit
+            </button>
+            <button
+              type="button"
+              aria-label={`Delete ${routine.name}`}
+              disabled={busy}
+              onClick={() => onDelete(routine)}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
+      {steps.length > 0 ? (
+        <ol className="step-list">
+          {steps.map((step, index) => (
+            <li key={step.id}>
+              <span className="step-name">{productLabel(step.product)}</span>
+              <span className="step-actions">
+                <button
+                  type="button"
+                  aria-label={`Move ${step.product.name} up`}
+                  disabled={busy || index === 0}
+                  onClick={() => moveStep(index, -1)}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Move ${step.product.name} down`}
+                  disabled={busy || index === steps.length - 1}
+                  onClick={() => moveStep(index, 1)}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Remove ${step.product.name}`}
+                  disabled={busy}
+                  onClick={() => onRemoveStep(routine, step)}
+                >
+                  Remove
+                </button>
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="step-empty">No steps yet.</p>
+      )}
+
+      {products.length > 0 ? (
+        <form className="step-form" onSubmit={handleAddStep}>
+          <select
+            aria-label={`Product to add to ${routine.name}`}
+            value={productId}
+            onChange={(event) => setProductId(event.target.value)}
+          >
+            <option value="">Choose a product…</option>
+            {products.map((product) => (
+              <option key={product.id} value={product.id}>
+                {productLabel(product)}
+              </option>
+            ))}
+          </select>
+          <button type="submit" disabled={busy || !productId}>
+            Add step
+          </button>
+        </form>
+      ) : (
+        <p className="step-empty">Add a product to your library to build this routine.</p>
+      )}
+    </li>
+  );
+}
