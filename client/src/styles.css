@@ -1,0 +1,239 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f7f5f2;
+  --surface: #ffffff;
+  --text: #2b2826;
+  --muted: #6f6964;
+  --border: #e3ded8;
+  --accent: #3f7267;
+  --accent-text: #ffffff;
+  --error: #a3312a;
+  --error-bg: #fbeceb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1a19;
+    --surface: #272422;
+    --text: #efebe7;
+    --muted: #a8a19b;
+    --border: #3b3734;
+    --accent: #7fb8aa;
+    --accent-text: #15211e;
+    --error: #f0a8a2;
+    --error-bg: #3a2220;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  padding: 0.4rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--muted);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.panel {
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.error {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--error-bg);
+  color: var(--error);
+  border-radius: 6px;
+}
+
+.empty {
+  padding: 2rem 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.product-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tag {
+  flex-shrink: 0;
+  padding: 0 0.5rem;
+  background: var(--bg);
+  color: var(--muted);
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.brand,
+.dates,
+.notes {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.ingredients {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.9rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.product-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.product-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.product-form .error {
+  margin-bottom: 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: end;
+  gap: 0.5rem;
+}
+
+@media (min-width: 800px) {
+  .layout.with-form {
+    grid-template-columns: 340px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .product-form {
+    position: sticky;
+    top: 1rem;
+  }
+}

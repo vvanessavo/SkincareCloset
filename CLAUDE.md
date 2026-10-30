@@ -3,7 +3,7 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 
 ## Roadmap (update checkboxes as you finish each step)
 - [x] 1. Express API, SQLite schema, product CRUD + tests
-- [ ] 2. React frontend: product library + add/edit form, proxy /api to :3001
+- [x] 2. React frontend: product library + add/edit form, proxy /api to :3001
 - [ ] 3. Routines API + routine builder UI (AM/PM, ordered steps)
 - [ ] 4. Today's checklist + streak counter (consider soft-deleting steps)
 - [ ] 5. Skin log (daily note + 1-5 rating)
@@ -20,3 +20,6 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 ## Decisions
 - Products used in a routine can't be deleted (409) to protect history.
 - Ingredients stored as JSON text; normalize later if querying by ingredient.
+- Client refetches the product list after each change instead of mirroring the API's sort order in JS.
+- Ingredients form splits on newlines and commas, but keeps commas between digits (1,2-hexanediol).
+- Category is free text with suggestions, matching the API, rather than a fixed list.
