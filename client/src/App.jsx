@@ -1,14 +1,26 @@
 import { useState } from 'react';
 import { ProductLibrary } from './components/ProductLibrary.jsx';
 import { RoutineBuilder } from './components/RoutineBuilder.jsx';
+import { confirmDiscard } from './unsavedChanges.js';
 
 const PAGES = [
-  { name: 'Products', Page: ProductLibrary },
-  { name: 'Routines', Page: RoutineBuilder },
+  { name: 'Products', hash: '#products', Page: ProductLibrary },
+  { name: 'Routines', hash: '#routines', Page: RoutineBuilder },
 ];
 
+function pageFromHash() {
+  return PAGES.find((page) => page.hash === window.location.hash) ?? PAGES[0];
+}
+
 export function App() {
-  const [current, setCurrent] = useState(PAGES[0]);
+  const [current, setCurrent] = useState(pageFromHash);
+
+  function handleSelect(page) {
+    if (page === current || !confirmDiscard()) return;
+    // Replacing keeps Back from moving between tabs past the discard check.
+    window.history.replaceState(null, '', page.hash);
+    setCurrent(page);
+  }
 
   return (
     <div className="app">
@@ -18,7 +30,7 @@ export function App() {
             key={page.name}
             type="button"
             aria-current={page === current ? 'page' : undefined}
-            onClick={() => setCurrent(page)}
+            onClick={() => handleSelect(page)}
           >
             {page.name}
           </button>

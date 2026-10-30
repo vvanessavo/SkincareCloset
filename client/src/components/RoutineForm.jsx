@@ -1,10 +1,15 @@
 import { useState } from 'react';
+import { useUnsavedChanges } from '../unsavedChanges.js';
 
 export function RoutineForm({ routine, onSave, onCancel }) {
-  const [name, setName] = useState(routine?.name ?? '');
-  const [period, setPeriod] = useState(routine?.period ?? 'AM');
+  const initialName = routine?.name ?? '';
+  const initialPeriod = routine?.period ?? 'AM';
+  const [name, setName] = useState(initialName);
+  const [period, setPeriod] = useState(initialPeriod);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  useUnsavedChanges(name !== initialName || period !== initialPeriod);
 
   async function handleSubmit(event) {
     event.preventDefault();

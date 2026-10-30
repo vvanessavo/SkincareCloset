@@ -47,6 +47,7 @@ describe('App', () => {
     cleanup();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    window.history.replaceState(null, '', '/');
   });
 
   it('lists products', async () => {
@@ -147,6 +148,166 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: `Edit ${toner.name}` }));
 
     expect(screen.getByLabelText('Name').value).toBe(toner.name);
+  });
+
+  describe('unsaved changes', () => {
+    const toner = { ...serum, id: 2, name: 'Toner' };
+
+    async function editWithChanges(user) {
+      await user.click(await screen.findByRole('button', { name: `Edit ${serum.name}` }));
+      await user.type(screen.getByLabelText('Brand'), ' Labs');
+    }
+
+    it('does not ask when the form has no changes', async () => {
+      const user = userEvent.setup();
+      mockApi([serum, toner]);
+      render(<App />);
+
+      await user.click(await screen.findByRole('button', { name: `Edit ${serum.name}` }));
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+      await user.click(screen.getByRole('button', { name: 'Routines' }));
+
+      expect(window.confirm).not.toHaveBeenCalled();
+    });
+
+    it('stops asking once a change is undone', async () => {
+      const user = userEvent.setup();
+      mockApi([serum, toner]);
+      render(<App />);
+
+      await user.click(await screen.findByRole('button', { name: `Edit ${serum.name}` }));
+      await user.type(screen.getByLabelText('Brand'), 'x{Backspace}');
+      await user.click(screen.getByRole('button', { name: `Edit ${toner.name}` }));
+
+      expect(window.confirm).not.toHaveBeenCalled();
+    });
+
+    it('keeps the edits when opening another product is declined', async () => {
+      const user = userEvent.setup();
+      window.confirm.mockReturnValue(false);
+      mockApi([serum, toner]);
+      render(<App />);
+
+      await editWithChanges(user);
+      await user.click(screen.getByRole('button', { name: `Edit ${toner.name}` }));
+
+      expect(screen.getByLabelText('Brand').value).toBe('Acme Labs');
+      expect(screen.getByLabelText('Name').value).toBe(serum.name);
+    });
+
+    it('keeps the edits when adding a product is declined', async () => {
+      const user = userEvent.setup();
+      window.confirm.mockReturnValue(false);
+      mockApi([serum]);
+      render(<App />);
+
+      await editWithChanges(user);
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+
+      expect(screen.getByLabelText('Brand').value).toBe('Acme Labs');
+    });
+
+    it('keeps the edits when switching tabs is declined', async () => {
+      const user = userEvent.setup();
+      window.confirm.mockReturnValue(false);
+      mockApi([serum]);
+      render(<App />);
+
+      await editWithChanges(user);
+      await user.click(screen.getByRole('button', { name: 'Routines' }));
+
+      expect(screen.getByLabelText('Brand').value).toBe('Acme Labs');
+      expect(window.location.hash).toBe('');
+    });
+
+    it('opens the other product when discarding is confirmed', async () => {
+      const user = userEvent.setup();
+      mockApi([serum, toner]);
+      render(<App />);
+
+      await editWithChanges(user);
+      await user.click(screen.getByRole('button', { name: `Edit ${toner.name}` }));
+
+      expect(screen.getByLabelText('Name').value).toBe(toner.name);
+    });
+
+    it('does not ask when reopening the product being edited', async () => {
+      const user = userEvent.setup();
+      mockApi([serum]);
+      render(<App />);
+
+      await editWithChanges(user);
+      await user.click(screen.getByRole('button', { name: `Edit ${serum.name}` }));
+
+      expect(window.confirm).not.toHaveBeenCalled();
+      expect(screen.getByLabelText('Brand').value).toBe('Acme Labs');
+    });
+
+    it('does not ask after a save', async () => {
+      const user = userEvent.setup();
+      mockApi([serum], () => jsonResponse(200, serum));
+      render(<App />);
+
+      await editWithChanges(user);
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
+      await user.click(screen.getByRole('button', { name: 'Routines' }));
+
+      expect(window.confirm).not.toHaveBeenCalled();
+    });
+
+    it('warns before leaving the page only while there are changes', async () => {
+      const user = userEvent.setup();
+      mockApi([serum]);
+      render(<App />);
+
+      function leavePage() {
+        const event = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      }
+
+      expect(leavePage()).toBe(false);
+      await editWithChanges(user);
+      expect(leavePage()).toBe(true);
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(leavePage()).toBe(false);
+    });
+  });
+
+  describe('tabs', () => {
+    it('reopens the tab from the URL after a reload', async () => {
+      const user = userEvent.setup();
+      mockApi([]);
+      const { unmount } = render(<App />);
+
+      await user.click(screen.getByRole('button', { name: 'Routines' }));
+      expect(window.location.hash).toBe('#routines');
+      unmount();
+      render(<App />);
+
+      expect(screen.getByRole('heading', { name: 'Routines' })).toBeTruthy();
+    });
+
+    it('falls back to products for an unknown hash', () => {
+      window.history.replaceState(null, '', '#nope');
+      mockApi([]);
+      render(<App />);
+
+      expect(screen.getByRole('heading', { name: 'Product library' })).toBeTruthy();
+    });
+  });
+
+  it('clears the delete error when the form opens', async () => {
+    const user = userEvent.setup();
+    mockApi([serum], () => jsonResponse(409, { error: 'Product is used in a routine' }));
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: `Delete ${serum.name}` }));
+    await screen.findByRole('alert');
+    await user.click(screen.getByRole('button', { name: 'Add product' }));
+
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('deletes a product after confirming', async () => {

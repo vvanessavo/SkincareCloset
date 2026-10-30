@@ -57,6 +57,20 @@ describe('RoutineBuilder', () => {
     cleanup();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('keeps an unsaved rename when switching tabs is declined', async () => {
+    const user = userEvent.setup();
+    window.confirm.mockReturnValue(false);
+    mockApi({});
+    await openRoutines(user);
+
+    await user.click(await screen.findByRole('button', { name: 'Rename Daily' }));
+    await user.type(screen.getByLabelText('Routine name'), ' routine');
+    await user.click(screen.getByRole('button', { name: 'Products' }));
+
+    expect(screen.getByLabelText('Routine name').value).toBe('Daily routine');
   });
 
   it('groups routines by period and shows steps in order', async () => {

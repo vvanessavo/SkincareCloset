@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createProduct, deleteProduct, listProducts, updateProduct } from '../api.js';
+import { confirmDiscard } from '../unsavedChanges.js';
 import { ProductForm } from './ProductForm.jsx';
 import { ProductList } from './ProductList.jsx';
 
@@ -21,6 +22,13 @@ export function ProductLibrary() {
   useEffect(() => {
     load();
   }, [load]);
+
+  function openForm(target) {
+    if (editing?.id === target.id && editing) return;
+    if (!confirmDiscard()) return;
+    setError(null);
+    setEditing(target);
+  }
 
   async function handleSave(product) {
     if (editing.id) {
@@ -47,7 +55,7 @@ export function ProductLibrary() {
     <>
       <header className="app-header">
         <h1>Product library</h1>
-        <button type="button" className="primary" onClick={() => setEditing({})}>
+        <button type="button" className="primary" onClick={() => openForm({})}>
           Add product
         </button>
       </header>
@@ -69,7 +77,7 @@ export function ProductLibrary() {
         )}
         <section>
           {products ? (
-            <ProductList products={products} onEdit={setEditing} onDelete={handleDelete} />
+            <ProductList products={products} onEdit={openForm} onDelete={handleDelete} />
           ) : (
             !error && <p className="empty">Loading…</p>
           )}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toFormValues, toProductPayload } from '../productFields.js';
+import { useUnsavedChanges } from '../unsavedChanges.js';
 
 const CATEGORIES = [
   'cleanser',
@@ -15,9 +16,12 @@ const CATEGORIES = [
 ];
 
 export function ProductForm({ product, onSave, onCancel }) {
-  const [values, setValues] = useState(() => toFormValues(product));
+  const [initialValues] = useState(() => toFormValues(product));
+  const [values, setValues] = useState(initialValues);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  useUnsavedChanges(Object.keys(values).some((name) => values[name] !== initialValues[name]));
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -39,12 +43,6 @@ export function ProductForm({ product, onSave, onCancel }) {
   return (
     <form className="panel product-form" onSubmit={handleSubmit}>
       <h2>{product ? `Edit ${product.name}` : 'Add product'}</h2>
-
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
 
       <label>
         Name
@@ -93,13 +91,20 @@ export function ProductForm({ product, onSave, onCancel }) {
         <textarea name="notes" rows={3} value={values.notes} onChange={handleChange} />
       </label>
 
-      <div className="form-actions">
-        <button type="button" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className="primary" disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
+      <div className="form-footer">
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="form-actions">
+          <button type="button" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="submit" className="primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
     </form>
   );
