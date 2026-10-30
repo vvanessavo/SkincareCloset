@@ -96,6 +96,7 @@ describe('App', () => {
           opened_on: null,
           expires_on: null,
           notes: '',
+          catalog_code: null,
         },
       },
     ]);
@@ -149,6 +150,201 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: `Edit ${toner.name}` }));
 
     expect(screen.getByLabelText('Name').value).toBe(toner.name);
+  });
+
+  describe('catalog search', () => {
+    const aloe = {
+      code: '880',
+      name: 'Aloe Soothing Sun Cream',
+      brand: 'COSRX',
+      category: 'sunscreen',
+      ingredients: 'Water, 1,2-Hexanediol, Glycerin',
+      image_url: 'https://images.openbeautyfacts.org/aloe.jpg',
+    };
+    const bare = { ...aloe, code: '881', name: 'cosrx cream', ingredients: '', image_url: null };
+
+    // Answers searches from `catalog`, products with `products`, and writes with `respond`.
+    function mockCatalog({ results = [aloe, bare], total = 2, respond, products = [] }) {
+      const fetchMock = vi.fn(async (url, options = {}) => {
+        if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        if (url.startsWith('/api/catalog/search')) return jsonResponse(200, { total, results });
+        if (!options.method) return jsonResponse(200, products);
+        return respond(url, options);
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      return fetchMock;
+    }
+
+    function searches(fetchMock) {
+      return fetchMock.mock.calls.map(([url]) => url).filter((url) => url.includes('/search'));
+    }
+
+    async function searchFor(user, text) {
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+      await user.type(screen.getByLabelText('Search Open Beauty Facts'), text);
+    }
+
+    it('fills in the form from a result without saving', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockCatalog({});
+      render(<App />);
+
+      await searchFor(user, 'cosrx');
+      await user.click(await screen.findByRole('button', { name: /Aloe Soothing Sun Cream/ }));
+
+      expect(screen.getByLabelText('Name').value).toBe(aloe.name);
+      expect(screen.getByLabelText('Brand').value).toBe(aloe.brand);
+      expect(screen.getByLabelText('Category').value).toBe(aloe.category);
+      expect(screen.getByLabelText('Ingredients').value).toBe(
+        'Water\n1,2-Hexanediol\nGlycerin',
+      );
+      expect(screen.getByRole('status').textContent).toMatch(/Check the details/);
+      expect(fetchMock.mock.calls.filter(([, options]) => options?.method)).toEqual([]);
+    });
+
+    it('saves your corrections and copies the picture', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockCatalog({ respond: () => jsonResponse(201, { ...serum, id: 7 }) });
+      render(<App />);
+
+      await searchFor(user, 'cosrx');
+      await user.click(await screen.findByRole('button', { name: /Aloe Soothing Sun Cream/ }));
+      await user.clear(screen.getByLabelText('Brand'));
+      await user.type(screen.getByLabelText('Brand'), 'Corrected');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
+      const writes = fetchMock.mock.calls.filter(([, options]) => options?.method);
+      expect(writes.map(([url, options]) => [options.method, url])).toEqual([
+        ['POST', '/api/products'],
+        ['PUT', '/api/products/7/image/from-catalog'],
+      ]);
+      expect(JSON.parse(writes[0][1].body)).toMatchObject({
+        brand: 'Corrected',
+        catalog_code: aloe.code,
+        ingredients: ['Water', '1,2-Hexanediol', 'Glycerin'],
+      });
+      expect(JSON.parse(writes[1][1].body)).toEqual({ code: aloe.code });
+    });
+
+    it('skips the picture copy when the result has none', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockCatalog({ respond: () => jsonResponse(201, { ...serum, id: 7 }) });
+      render(<App />);
+
+      await searchFor(user, 'cosrx');
+      await user.click(await screen.findByRole('button', { name: /cosrx cream/ }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
+      expect(fetchMock.mock.calls.some(([url]) => url.includes('from-catalog'))).toBe(false);
+    });
+
+    it('does not copy the picture after you remove it', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockCatalog({ respond: () => jsonResponse(201, { ...serum, id: 7 }) });
+      render(<App />);
+
+      await searchFor(user, 'cosrx');
+      await user.click(await screen.findByRole('button', { name: /Aloe Soothing Sun Cream/ }));
+      await user.click(screen.getByRole('button', { name: 'Remove picture' }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
+      expect(fetchMock.mock.calls.some(([url]) => url.includes('from-catalog'))).toBe(false);
+    });
+
+    it('keeps dates and notes when choosing a result', async () => {
+      const user = userEvent.setup();
+      mockCatalog({});
+      render(<App />);
+
+      await searchFor(user, 'cosrx');
+      await user.type(screen.getByLabelText('Notes'), 'Gift');
+      await user.click(await screen.findByRole('button', { name: /Aloe Soothing Sun Cream/ }));
+
+      expect(screen.getByLabelText('Notes').value).toBe('Gift');
+    });
+
+    it('does not search for a single character', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockCatalog({});
+      render(<App />);
+
+      await searchFor(user, 'c');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      expect(searches(fetchMock)).toEqual([]);
+    });
+
+    it('waits for typing to pause and encodes the query', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockCatalog({});
+      render(<App />);
+
+      await searchFor(user, "l'oréal & co");
+      await screen.findByRole('button', { name: /Aloe Soothing Sun Cream/ });
+
+      expect(searches(fetchMock)).toEqual([
+        `/api/catalog/search?q=${encodeURIComponent("l'oréal & co")}`,
+      ]);
+    });
+
+    it('does not submit the form when Enter is pressed in search', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockCatalog({});
+      render(<App />);
+
+      await searchFor(user, 'cosrx{Enter}');
+
+      expect(fetchMock.mock.calls.filter(([, options]) => options?.method)).toEqual([]);
+    });
+
+    it('only offers search when adding a product', async () => {
+      const user = userEvent.setup();
+      mockCatalog({ products: [serum] });
+      render(<App />);
+
+      await user.click(await screen.findByRole('button', { name: `Edit ${serum.name}` }));
+
+      expect(screen.queryByLabelText('Search Open Beauty Facts')).toBeNull();
+    });
+
+    it('says when nothing matches', async () => {
+      const user = userEvent.setup();
+      mockCatalog({ results: [], total: 40000 });
+      render(<App />);
+
+      await searchFor(user, 'nothing');
+
+      expect(await screen.findByText(/No matches/)).toBeTruthy();
+    });
+
+    it('explains an empty catalog', async () => {
+      const user = userEvent.setup();
+      mockCatalog({ results: [], total: 0 });
+      render(<App />);
+
+      await searchFor(user, 'cosrx');
+
+      expect(await screen.findByText('npm run import:catalog')).toBeTruthy();
+    });
+
+    it('links products to their source', async () => {
+      mockCatalog({ products: [{ ...serum, catalog_code: '880' }] });
+      render(<App />);
+
+      const link = await screen.findByRole('link', { name: 'Source: Open Beauty Facts' });
+
+      expect(link.getAttribute('href')).toBe('https://world.openbeautyfacts.org/product/880');
+    });
+
+    it('credits Open Beauty Facts on every page', () => {
+      mockCatalog({});
+      render(<App />);
+
+      expect(screen.getByRole('contentinfo').textContent).toMatch(/Open Database License/);
+    });
   });
 
   describe('pictures', () => {

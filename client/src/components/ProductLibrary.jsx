@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  copyCatalogImage,
   createProduct,
   deleteProduct,
   deleteProductImage,
@@ -37,7 +38,7 @@ export function ProductLibrary() {
     setEditing(target);
   }
 
-  async function handleSave(product, image) {
+  async function handleSave(product, image, catalogImageCode) {
     const saved = editing.id
       ? await updateProduct(editing.id, product)
       : await createProduct(product);
@@ -48,6 +49,7 @@ export function ProductLibrary() {
     try {
       if (image) await uploadProductImage(saved.id, image);
       if (image === null) await deleteProductImage(saved.id);
+      if (catalogImageCode) await copyCatalogImage(saved.id, catalogImageCode);
     } catch (err) {
       imageError = `${saved.name} was saved, but its picture wasn't: ${err.message}`;
     }

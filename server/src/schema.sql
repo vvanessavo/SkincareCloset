@@ -8,8 +8,20 @@ CREATE TABLE IF NOT EXISTS products (
   expires_on  TEXT,                       -- YYYY-MM-DD
   notes       TEXT,
   image       TEXT,                       -- filename in the uploads directory
+  catalog_code TEXT,                      -- Open Beauty Facts barcode, if added from search
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Local copy of Open Beauty Facts, replaced by `npm run import:catalog`.
+CREATE TABLE IF NOT EXISTS catalog_products (
+  code        TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  brand       TEXT,
+  category    TEXT,
+  ingredients TEXT NOT NULL DEFAULT '', -- as printed; the product form splits it for review
+  image_url   TEXT,
+  search_text TEXT NOT NULL             -- brand and name, lowercase without accents
 );
 
 CREATE TABLE IF NOT EXISTS routines (

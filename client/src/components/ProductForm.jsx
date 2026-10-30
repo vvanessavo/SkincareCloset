@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { toFormValues, toProductPayload } from '../productFields.js';
+import { applyCatalogItem, toFormValues, toProductPayload } from '../productFields.js';
 import { useUnsavedChanges } from '../unsavedChanges.js';
+import { CatalogSearch } from './CatalogSearch.jsx';
 import { ProductImage } from './ProductImage.jsx';
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -27,6 +28,7 @@ export function ProductForm({ product, onSave, onCancel }) {
   // undefined keeps the current picture, a File replaces it, null removes it.
   const [image, setImage] = useState(undefined);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [catalogItem, setCatalogItem] = useState(null);
 
   const isChanged = Object.keys(values).some((name) => values[name] !== initialValues[name]);
   useUnsavedChanges(isChanged || image !== undefined);
@@ -41,11 +43,19 @@ export function ProductForm({ product, onSave, onCancel }) {
     };
   }, [image]);
 
-  const imageSrc = image === null ? null : (previewUrl ?? product?.image_url);
+  const imageSrc =
+    image === null ? null : (previewUrl ?? catalogItem?.image_url ?? product?.image_url);
 
   function handleChange(event) {
     const { name, value } = event.target;
     setValues((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleCatalogSelect(item) {
+    setCatalogItem(item);
+    setValues((current) => applyCatalogItem(current, item));
+    setImage(undefined);
+    setError(null);
   }
 
   function handleImageChange(event) {
@@ -68,7 +78,11 @@ export function ProductForm({ product, onSave, onCancel }) {
     setError(null);
     setSaving(true);
     try {
-      await onSave(toProductPayload(values), image);
+      await onSave(
+        { ...toProductPayload(values), catalog_code: catalogItem?.code ?? null },
+        image,
+        image === undefined && catalogItem?.image_url ? catalogItem.code : null,
+      );
     } catch (err) {
       setError(err.message);
       setSaving(false);
@@ -78,6 +92,14 @@ export function ProductForm({ product, onSave, onCancel }) {
   return (
     <form className="panel product-form" onSubmit={handleSubmit}>
       <h2>{product ? `Edit ${product.name}` : 'Add product'}</h2>
+
+      {!product && <CatalogSearch onSelect={handleCatalogSelect} />}
+      {catalogItem && (
+        <p className="catalog-notice" role="status">
+          Filled in from Open Beauty Facts, which is written by volunteers. Check the details,
+          especially the ingredients, before saving.
+        </p>
+      )}
 
       <div className="image-field">
         <ProductImage src={imageSrc} name={values.name || '?'} className="medium" />
@@ -96,7 +118,13 @@ export function ProductForm({ product, onSave, onCancel }) {
 
       <label>
         Name
-        <input name="name" value={values.name} onChange={handleChange} required autoFocus />
+        <input
+          name="name"
+          value={values.name}
+          onChange={handleChange}
+          required
+          autoFocus={Boolean(product)}
+        />
       </label>
       <label>
         Brand

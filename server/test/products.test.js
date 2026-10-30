@@ -149,6 +149,7 @@ describe('schema', () => {
       .all();
 
     assert.deepEqual(tables, [
+      'catalog_products',
       'daily_logs',
       'products',
       'routine_steps',

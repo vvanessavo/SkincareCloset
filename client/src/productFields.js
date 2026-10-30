@@ -18,6 +18,17 @@ export function toFormValues(product) {
   };
 }
 
+// Replaces only what the catalog knows, so dates and notes survive a change of mind.
+export function applyCatalogItem(values, item) {
+  return {
+    ...values,
+    name: item.name,
+    brand: item.brand ?? '',
+    category: item.category ?? '',
+    ingredients: parseIngredients(item.ingredients).join('\n'),
+  };
+}
+
 export function toProductPayload(values) {
   return {
     ...values,

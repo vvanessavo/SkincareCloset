@@ -33,4 +33,8 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - Upload is a separate raw request after the product saves, so no multipart dependency. If it fails the product stays saved and the form closes, so a retry can't create a duplicate.
 - Schema changes to existing tables go in openDatabase, because CREATE TABLE IF NOT EXISTS won't alter them.
 - Routines is the first tab and default page.
+- Add product can search a local copy of Open Beauty Facts (`npm run import:catalog` in server/, table catalog_products). Never call their API for search: they block scraping and limit it to one call per real scan.
+- Search only fills in the form. Nothing saves until Save, because the data is volunteer-written and step 6 will rely on the ingredients.
+- A chosen result's picture is copied to uploads on save, from the URL in the catalog only, never one sent by the client.
+- Open Beauty Facts data is ODbL and pictures are CC BY-SA: keep the footer credit and per-product source link, and check share-alike before publishing the app or its data. The catalog stays gitignored inside server/data/.
 - A routine can use the same product twice (e.g. double cleanse), and a period can have several routines.

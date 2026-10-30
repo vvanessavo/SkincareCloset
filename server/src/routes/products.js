@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import express, { Router } from 'express';
-import { MAX_IMAGE_BYTES, detectImageExtension, imageUrl } from '../images.js';
+import { MAX_IMAGE_BYTES, detectImageExtension, downloadImage, imageUrl } from '../images.js';
 
-const TEXT_FIELDS = ['brand', 'category', 'notes'];
+const TEXT_FIELDS = ['brand', 'category', 'notes', 'catalog_code'];
 const DATE_FIELDS = ['opened_on', 'expires_on'];
 
 function isValidDate(value) {
@@ -61,8 +61,10 @@ export function productsRouter(db, uploadsDir) {
   const selectAll = db.prepare('SELECT * FROM products ORDER BY name COLLATE NOCASE, id');
   const selectOne = db.prepare('SELECT * FROM products WHERE id = ?');
   const insert = db.prepare(`
-    INSERT INTO products (name, brand, category, ingredients, opened_on, expires_on, notes)
-    VALUES (@name, @brand, @category, @ingredients, @opened_on, @expires_on, @notes)
+    INSERT INTO products
+      (name, brand, category, ingredients, opened_on, expires_on, notes, catalog_code)
+    VALUES
+      (@name, @brand, @category, @ingredients, @opened_on, @expires_on, @notes, @catalog_code)
   `);
   const update = db.prepare(`
     UPDATE products
@@ -75,6 +77,16 @@ export function productsRouter(db, uploadsDir) {
     UPDATE products SET image = ?, updated_at = datetime('now') WHERE id = ?
   `);
   const remove = db.prepare('DELETE FROM products WHERE id = ?');
+  const selectCatalogImage = db.prepare('SELECT image_url FROM catalog_products WHERE code = ?').pluck();
+
+  // A new filename on each upload stops browsers showing a cached old picture.
+  function storeImage(row, data) {
+    const filename = `${randomUUID()}.${detectImageExtension(data)}`;
+    writeFileSync(join(uploadsDir, filename), data);
+    updateImage.run(filename, row.id);
+    removeImageFile(row.image);
+    return serialize(selectOne.get(row.id));
+  }
 
   router.get('/', (req, res) => {
     res.json(selectAll.all().map(serialize));
@@ -103,21 +115,36 @@ export function productsRouter(db, uploadsDir) {
     res.json(serialize(selectOne.get(req.params.id)));
   });
 
-  // A new filename on each upload stops browsers showing a cached old picture.
   router.put('/:id/image', express.raw({ type: () => true, limit: MAX_IMAGE_BYTES }), (req, res) => {
     const row = selectOne.get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Product not found' });
 
-    const extension = detectImageExtension(req.body);
-    if (!extension) {
+    if (!detectImageExtension(req.body)) {
       return res.status(415).json({ error: 'Picture must be a JPEG, PNG or WebP image' });
     }
 
-    const filename = `${randomUUID()}.${extension}`;
-    writeFileSync(join(uploadsDir, filename), req.body);
-    updateImage.run(filename, row.id);
-    removeImageFile(row.image);
-    res.json(serialize(selectOne.get(row.id)));
+    res.json(storeImage(row, req.body));
+  });
+
+  // The URL comes from the catalog, never the request, so this can't fetch arbitrary addresses.
+  router.put('/:id/image/from-catalog', async (req, res) => {
+    const row = selectOne.get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Product not found' });
+
+    const url = selectCatalogImage.get(String(req.body?.code));
+    if (!url) return res.status(404).json({ error: 'Catalog picture not found' });
+
+    let data;
+    try {
+      data = await downloadImage(url);
+    } catch {
+      return res.status(502).json({ error: 'Could not download the picture' });
+    }
+    if (!detectImageExtension(data)) {
+      return res.status(502).json({ error: 'The catalog picture is not a supported image' });
+    }
+
+    res.json(storeImage(row, data));
   });
 
   router.delete('/:id/image', (req, res) => {

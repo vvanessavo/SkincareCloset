@@ -13,6 +13,21 @@ export function detectImageExtension(data) {
   return null;
 }
 
+// Reads at most the size limit, since a remote server's Content-Length can't be trusted.
+export async function downloadImage(url) {
+  const res = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(15_000) });
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of res.body) {
+    size += chunk.length;
+    if (size > MAX_IMAGE_BYTES) throw new Error('Picture is too large');
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
 export function imageUrl(filename) {
   return filename ? `/api/uploads/${filename}` : null;
 }

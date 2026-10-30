@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import express from 'express';
 import { uploadsPath } from './db.js';
+import { catalogRouter } from './routes/catalog.js';
 import { productsRouter } from './routes/products.js';
 import { routinesRouter } from './routes/routines.js';
 
@@ -11,6 +12,7 @@ export function createApp(db, uploadsDir = uploadsPath) {
 
   app.use(express.json());
   app.use('/api/uploads', express.static(uploadsDir));
+  app.use('/api/catalog', catalogRouter(db));
   app.use('/api/products', productsRouter(db, uploadsDir));
   app.use('/api/routines', routinesRouter(db));
 

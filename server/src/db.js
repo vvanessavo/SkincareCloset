@@ -21,7 +21,9 @@ export function openDatabase(path) {
 
   // CREATE TABLE IF NOT EXISTS leaves existing tables as they are.
   const columns = db.pragma('table_info(products)').map((column) => column.name);
-  if (!columns.includes('image')) db.exec('ALTER TABLE products ADD COLUMN image TEXT');
+  for (const column of ['image', 'catalog_code']) {
+    if (!columns.includes(column)) db.exec(`ALTER TABLE products ADD COLUMN ${column} TEXT`);
+  }
 
   return db;
 }

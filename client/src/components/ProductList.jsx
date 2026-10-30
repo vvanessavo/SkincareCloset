@@ -27,6 +27,16 @@ export function ProductList({ products, onEdit, onDelete }) {
             </p>
           )}
           {product.notes && <p className="notes">{product.notes}</p>}
+          {product.catalog_code && (
+            <a
+              className="source-link"
+              href={`https://world.openbeautyfacts.org/product/${product.catalog_code}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Source: Open Beauty Facts
+            </a>
+          )}
           <div className="card-actions">
             <button type="button" aria-label={`Edit ${product.name}`} onClick={() => onEdit(product)}>
               Edit

@@ -40,6 +40,14 @@ export function deleteProductImage(id) {
   return request(`/products/${id}/image`, { method: 'DELETE' });
 }
 
+export function copyCatalogImage(id, code) {
+  return request(`/products/${id}/image/from-catalog`, { method: 'PUT', body: { code } });
+}
+
+export function searchCatalog(query, signal) {
+  return request(`/catalog/search?q=${encodeURIComponent(query)}`, { signal });
+}
+
 export function listRoutines() {
   return request('/routines');
 }

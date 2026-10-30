@@ -37,6 +37,13 @@ export function App() {
         ))}
       </nav>
       <current.Page />
+      <footer className="app-footer">
+        Search results and marked products come from{' '}
+        <a href="https://world.openbeautyfacts.org" target="_blank" rel="noreferrer">
+          Open Beauty Facts
+        </a>
+        . Data under the Open Database License, pictures under CC BY-SA.
+      </footer>
     </div>
   );
 }
