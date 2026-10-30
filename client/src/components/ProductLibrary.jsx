@@ -8,6 +8,8 @@ import {
   updateProduct,
   uploadProductImage,
 } from '../api.js';
+import { localDate } from '../dates.js';
+import { expiryStatus } from '../expiry.js';
 import { confirmDiscard } from '../unsavedChanges.js';
 import { ProductForm } from './ProductForm.jsx';
 import { ProductList } from './ProductList.jsx';
@@ -68,6 +70,12 @@ export function ProductLibrary() {
     }
   }
 
+  const statuses = (products ?? []).map((product) =>
+    expiryStatus(product.expires_on, localDate()),
+  );
+  const expiredCount = statuses.filter((status) => status?.level === 'expired').length;
+  const soonCount = statuses.filter((status) => status?.level === 'soon').length;
+
   return (
     <>
       <header className="app-header">
@@ -80,6 +88,18 @@ export function ProductLibrary() {
       {error && (
         <p className="error" role="alert">
           {error}
+        </p>
+      )}
+
+      {(expiredCount > 0 || soonCount > 0) && (
+        <p className="expiry-summary">
+          <span aria-hidden="true">⚠</span>{' '}
+          {[
+            expiredCount > 0 && `${expiredCount} expired`,
+            soonCount > 0 && `${soonCount} expiring within 30 days`,
+          ]
+            .filter(Boolean)
+            .join(', ')}
         </p>
       )}
 

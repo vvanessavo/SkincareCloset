@@ -64,6 +64,10 @@ export function getCalendar(month) {
   return request(`/logs/calendar?month=${month}`);
 }
 
+export function getHistory(from, to) {
+  return request(`/logs/history?from=${from}&to=${to}`);
+}
+
 export function saveLog(date, log) {
   return request(`/logs/${date}`, { method: 'PUT', body: log });
 }

@@ -1,3 +1,4 @@
+import { ExpiryTag } from './ExpiryTag.jsx';
 import { ProductImage } from './ProductImage.jsx';
 
 export function ProductList({ products, onEdit, onDelete }) {
@@ -15,6 +16,7 @@ export function ProductList({ products, onEdit, onDelete }) {
               <h2>{product.name}</h2>
               {product.brand && <p className="brand">{product.brand}</p>}
               {product.category && <span className="tag">{product.category}</span>}
+              <ExpiryTag expiresOn={product.expires_on} />
             </div>
           </div>
           {product.ingredients.length > 0 && (

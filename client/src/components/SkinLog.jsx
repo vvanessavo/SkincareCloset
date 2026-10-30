@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { listLogs, saveLog } from '../api.js';
 import { formatDate, localDate } from '../dates.js';
 import { confirmDiscard, hasUnsavedChanges } from '../unsavedChanges.js';
+import { ProgressCharts } from './ProgressCharts.jsx';
 import { RATINGS, SkinLogForm } from './SkinLogForm.jsx';
 
 export function SkinLog() {
@@ -78,7 +79,8 @@ export function SkinLog() {
           </section>
         )}
 
-        <section>
+        <section className="log-column">
+          <ProgressCharts today={today} refreshKey={saveCount} />
           {!entries && !error && <p className="empty">Loading…</p>}
           {entries?.length === 0 && (
             <p className="empty">No entries yet. Rate your skin today to start your log.</p>

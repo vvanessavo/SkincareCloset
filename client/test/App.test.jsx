@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App.jsx';
+import { localDate } from '../src/dates.js';
 
 const serum = {
   id: 1,
@@ -150,6 +151,34 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: `Edit ${toner.name}` }));
 
     expect(screen.getByLabelText('Name').value).toBe(toner.name);
+  });
+
+  describe('expiry warnings', () => {
+    const inDays = (days) => localDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+
+    it('tags expired and expiring products', async () => {
+      mockApi([
+        { ...serum, id: 1, name: 'Old', expires_on: inDays(-10) },
+        { ...serum, id: 2, name: 'Soon', expires_on: inDays(5) },
+        { ...serum, id: 3, name: 'Fine', expires_on: inDays(300) },
+        { ...serum, id: 4, name: 'Undated', expires_on: null },
+      ]);
+      render(<App />);
+
+      expect(await screen.findByText(/Expired 10 days ago/)).toBeTruthy();
+      expect(screen.getByText(/Expires in 5 days/)).toBeTruthy();
+      expect(document.querySelectorAll('.expiry-tag')).toHaveLength(2);
+      expect(screen.getByText(/1 expired, 1 expiring within 30 days/)).toBeTruthy();
+    });
+
+    it('shows no summary when nothing is expiring', async () => {
+      mockApi([{ ...serum, expires_on: inDays(300) }]);
+      render(<App />);
+
+      await screen.findByRole('heading', { name: serum.name });
+
+      expect(screen.queryByText(/expiring within/)).toBeNull();
+    });
   });
 
   describe('catalog search', () => {

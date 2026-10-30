@@ -105,6 +105,7 @@ describe('/api/routines', () => {
       brand: 'Acme',
       category: null,
       ingredients: [],
+      expires_on: null,
       image_url: null,
     });
     assert.deepEqual(await stepProductNames(), ['Cleanser', 'Serum']);

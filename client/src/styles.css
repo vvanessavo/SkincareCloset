@@ -443,9 +443,92 @@ textarea {
   accent-color: var(--accent);
 }
 
-.check.done span:last-child {
+.check.done .check-name {
   color: var(--muted);
   text-decoration: line-through;
+}
+
+.expiry-tag {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.expiry-tag.soon {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+}
+
+.expiry-tag.expired {
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+.expiry-summary {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.log-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.charts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.charts-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.chart-range {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.chart-range button {
+  padding: 0.1rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.chart-range button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.charts-summary {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.chart-title {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chart-canvas {
+  position: relative;
+  height: 150px;
 }
 
 .skin-form,
@@ -805,6 +888,8 @@ textarea {
 
 .step-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.35rem;
   margin-top: 0.25rem;
 }

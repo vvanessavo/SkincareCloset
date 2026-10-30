@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ExpiryTag } from './ExpiryTag.jsx';
 import { ProductImage } from './ProductImage.jsx';
 import { RoutineForm } from './RoutineForm.jsx';
 
@@ -92,6 +93,7 @@ export function RoutineCard({
                 >
                   Remove
                 </button>
+                <ExpiryTag expiresOn={step.product.expires_on} />
               </span>
             </li>
           ))}

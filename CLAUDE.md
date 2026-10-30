@@ -8,7 +8,7 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - [x] 4. Today's checklist + streak counter (consider soft-deleting steps)
 - [x] 5. Skin log (daily note + 1-5 rating)
 - [x] 6. Ingredient conflict checker (retinol + vitamin C, retinol + AHA/BHA) with unit tests
-- [ ] 7. Expiry warnings + progress chart (Chart.js)
+- [x] 7. Expiry warnings + progress chart (Chart.js)
 - [ ] 8. README with setup, screenshots, design decisions
 
 ## Rules
@@ -30,6 +30,9 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - An unfinished today doesn't break the streak until the day is over.
 - The client sends today's date, because "today" depends on the browser's time zone. Fetching the checklist refreshes that date's stored result, so the UI only ever fetches today.
 - Today is the second tab; Routines stays the default page.
+- Expiry warnings start 30 days out and show on product cards, routine steps and Today, because that's where a product gets used. The expiry date itself still counts as usable. Status is worked out in the browser, which knows the local date.
+- Skin rating and routine completion are two charts, never one with two axes, because their scales are unrelated. They live on the Skin log tab rather than a fifth tab.
+- Chart.js is used directly, not through react-chartjs-2, so there's one less dependency. Canvas can't read CSS variables, so charts rebuild when the color scheme changes.
 - Conflicts compare different products in the same routine only. Using actives at different times of day is the usual advice, and a single formula with both was made to work together.
 - Conflict matching is deliberately narrow (see the comment in conflicts.js) and was tuned against the real catalog. Exfoliating acids and vitamin C in the last third of a full label count as traces. Retinoids never do, since they work at around 0.1%.
 - Conflicts are warnings, never blocks. Products with no ingredient list are named as not checked, so silence isn't read as safe.

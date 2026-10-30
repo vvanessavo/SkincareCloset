@@ -38,6 +38,7 @@ function mockApi({ get = () => jsonResponse(200, checklist()), put, calendar = (
   const fetchMock = vi.fn(async (url, options = {}) => {
     if (options.method) return put(url, options);
     if (url.startsWith('/api/logs/calendar')) return jsonResponse(200, calendar(url));
+    if (url === '/api/products') return jsonResponse(200, []);
     return get();
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -270,6 +271,19 @@ describe('TodayChecklist', () => {
       expect(await screen.findByText(/Couldn't load this month/)).toBeTruthy();
       expect(screen.getByRole('checkbox', { name: /Cleanser/ })).toBeTruthy();
     });
+  });
+
+  it('warns about an expired product on its step without changing its name', async () => {
+    const expired = step(10, 'Cleanser');
+    expired.product.expires_on = '2020-01-01';
+    const [morning] = checklist().routines;
+    mockApi({
+      get: () => jsonResponse(200, checklist({ routines: [{ ...morning, steps: [expired] }] })),
+    });
+    renderToday();
+
+    expect(await screen.findByText(/Expired \d+ days ago/)).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: /Cleanser/ })).toBeTruthy();
   });
 
   it('leaves out a time of day with no routines', async () => {

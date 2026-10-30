@@ -4,6 +4,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App.jsx';
 import { formatDate, localDate } from '../src/dates.js';
 
+// Canvas isn't available in the test browser, so this records what would be drawn.
+const charts = vi.hoisted(() => []);
+
+vi.mock('chart.js', () => {
+  class Chart {
+    static register() {}
+
+    constructor(canvas, config) {
+      this.config = config;
+      this.destroyed = false;
+      charts.push(this);
+    }
+
+    destroy() {
+      this.destroyed = true;
+    }
+  }
+  return {
+    Chart,
+    BarController: {},
+    BarElement: {},
+    CategoryScale: {},
+    LinearScale: {},
+    LineController: {},
+    LineElement: {},
+    PointElement: {},
+    Tooltip: {},
+  };
+});
+
 const TODAY = localDate();
 const EARLIER = '2026-01-15';
 
@@ -12,9 +42,10 @@ function jsonResponse(status, body) {
 }
 
 // A small stand-in that remembers saves, so the page reloads what it just wrote.
-function mockApi(initial = [], { failSave } = {}) {
+function mockApi(initial = [], { failSave, history } = {}) {
   let entries = initial;
   const fetchMock = vi.fn(async (url, options = {}) => {
+    if (url.startsWith('/api/logs/history')) return jsonResponse(200, history ?? entries);
     if (!options.method) return jsonResponse(200, url === '/api/logs' ? entries : []);
     if (failSave) return jsonResponse(400, { error: failSave });
 
@@ -194,6 +225,96 @@ describe('SkinLog', () => {
     renderLog();
 
     expect((await screen.findByRole('alert')).textContent).toBe('Request failed (500)');
+  });
+
+  describe('progress charts', () => {
+    const live = () => charts.filter((chart) => !chart.destroyed);
+    const rows = [
+      { date: TODAY, percent: 50, complete: false, skin_rating: 4, notes: null },
+    ];
+
+    afterEach(() => {
+      charts.length = 0;
+    });
+
+    it('asks for the last 30 days, ending today', async () => {
+      const fetchMock = mockApi();
+      renderLog();
+
+      await screen.findByText(/Rate your skin or tick off/);
+
+      expect(fetchMock.mock.calls.map(([url]) => url).find((url) => url.includes('history'))).toMatch(
+        new RegExp(`from=\\d{4}-\\d{2}-\\d{2}&to=${TODAY}$`),
+      );
+    });
+
+    it('draws two separate charts with a summary', async () => {
+      mockApi([], { history: rows });
+      renderLog();
+
+      expect(await screen.findByText(/Average skin rating 4\.0\/5 · 0 of 30 days finished/)).toBeTruthy();
+      expect(live().map((chart) => chart.config.type)).toEqual(['line', 'bar']);
+      expect(screen.getByRole('img', { name: /Skin rating over the last 30 days/ })).toBeTruthy();
+      expect(screen.getByRole('img', { name: /Routine completion over the last 30 days/ })).toBeTruthy();
+    });
+
+    it('only draws the chart it has data for', async () => {
+      mockApi([], { history: [{ ...rows[0], skin_rating: null }] });
+      renderLog();
+
+      await screen.findByText('Routine completed');
+
+      expect(screen.queryByText('Skin rating')).toBeNull();
+      expect(live().map((chart) => chart.config.type)).toEqual(['bar']);
+    });
+
+    it('switches to 90 days', async () => {
+      const user = userEvent.setup();
+      mockApi([], { history: rows });
+      renderLog();
+
+      await screen.findByText('Routine completed');
+      await user.click(screen.getByRole('button', { name: '90 days' }));
+
+      await waitFor(() => expect(live()[0].config.data.labels).toHaveLength(90));
+      expect(screen.getByRole('button', { name: '90 days' }).getAttribute('aria-pressed')).toBe('true');
+      expect(live()).toHaveLength(2);
+    });
+
+    it('updates after a save', async () => {
+      const user = userEvent.setup();
+      mockApi();
+      renderLog();
+
+      await user.click(await screen.findByRole('radio', { name: '5 Great' }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect(await screen.findByText(/Average skin rating 5\.0\/5/)).toBeTruthy();
+    });
+
+    it('cleans up charts when leaving the page', async () => {
+      const user = userEvent.setup();
+      mockApi([], { history: rows });
+      renderLog();
+
+      await screen.findByText('Routine completed');
+      await user.click(screen.getByRole('button', { name: 'Products' }));
+
+      expect(live()).toEqual([]);
+    });
+
+    it('keeps the log usable when the charts fail to load', async () => {
+      const fetchMock = mockApi();
+      fetchMock.mockImplementation(async (url) =>
+        url.startsWith('/api/logs/history')
+          ? new Response('', { status: 500 })
+          : jsonResponse(200, []),
+      );
+      renderLog();
+
+      expect(await screen.findByText(/Couldn't load your progress/)).toBeTruthy();
+      expect(screen.getByLabelText('Notes')).toBeTruthy();
+    });
   });
 
   describe('overnight', () => {

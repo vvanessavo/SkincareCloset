@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getChecklist, setStepDone } from '../api.js';
 import { localDate } from '../dates.js';
+import { ExpiryTag } from './ExpiryTag.jsx';
 import { ProductImage } from './ProductImage.jsx';
 import { ProgressCalendar } from './ProgressCalendar.jsx';
 import { ProgressRing } from './ProgressRing.jsx';
@@ -139,7 +140,8 @@ export function TodayChecklist() {
                                     name={step.product.name}
                                     className="small"
                                   />
-                                  <span>{step.product.name}</span>
+                                  <span className="check-name">{step.product.name}</span>
+                                  <ExpiryTag expiresOn={step.product.expires_on} />
                                 </label>
                               </li>
                             ))}

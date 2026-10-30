@@ -146,6 +146,15 @@ describe('RoutineBuilder', () => {
     expect(await screen.findByText(/no ingredient list: Cleanser, Serum/)).toBeTruthy();
   });
 
+  it('warns about an expired product on its step', async () => {
+    const user = userEvent.setup();
+    const expired = { ...serum, expires_on: '2020-01-01' };
+    mockApi({ routines: [{ ...evening, steps: [{ id: 200, product: expired }] }] });
+    await openRoutines(user);
+
+    expect(await screen.findByText(/Expired \d+ days ago/)).toBeTruthy();
+  });
+
   it('shows empty states', async () => {
     const user = userEvent.setup();
     mockApi({ routines: [] });

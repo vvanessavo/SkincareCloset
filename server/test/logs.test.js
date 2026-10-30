@@ -163,6 +163,53 @@ describe('/api/logs', () => {
     });
   });
 
+  describe('/history', () => {
+    function history(query) {
+      return api.get('/api/logs/history').query(query);
+    }
+
+    it('rejects an invalid range', async () => {
+      await history({}).expect(400);
+      await history({ from: '2026-10-01' }).expect(400);
+      await history({ from: 'soon', to: '2026-10-30' }).expect(400);
+      await history({ from: '2026-10-30', to: '2026-10-01' }).expect(400);
+    });
+
+    it('returns days in the range, oldest first, including both ends', async () => {
+      await save('2026-11-01', { skin_rating: 1 });
+      await save('2026-10-30', { skin_rating: 2 });
+      await save('2026-10-01', { skin_rating: 3 });
+      await save('2026-09-30', { skin_rating: 4 });
+
+      const res = await history({ from: '2026-10-01', to: '2026-10-30' }).expect(200);
+
+      assert.deepEqual(
+        res.body.map(({ date, skin_rating }) => [date, skin_rating]),
+        [
+          ['2026-10-01', 3],
+          ['2026-10-30', 2],
+        ],
+      );
+    });
+
+    it('crosses months and includes routine progress', async () => {
+      const { body: product } = await api.post('/api/products').send({ name: 'Toner' });
+      const { body: routine } = await api.post('/api/routines').send({ name: 'AM', period: 'AM' });
+      const { body: withStep } = await api
+        .post(`/api/routines/${routine.id}/steps`)
+        .send({ product_id: product.id });
+      await api
+        .put(`/api/checklist/2026-09-30/steps/${withStep.steps[0].id}`)
+        .send({ done: true });
+
+      const res = await history({ from: '2026-09-01', to: '2026-10-30' }).expect(200);
+
+      assert.deepEqual(res.body, [
+        { date: '2026-09-30', percent: 100, complete: true, skin_rating: null, notes: null },
+      ]);
+    });
+  });
+
   describe('alongside the checklist', () => {
     let step;
 

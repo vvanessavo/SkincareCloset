@@ -2,7 +2,8 @@ import { imageUrl } from './images.js';
 
 export function createStepReader(db) {
   const selectSteps = db.prepare(`
-    SELECT s.id, p.id AS product_id, p.name, p.brand, p.category, p.image, p.ingredients
+    SELECT s.id, p.id AS product_id, p.name, p.brand, p.category, p.image, p.ingredients,
+           p.expires_on
     FROM routine_steps s
     JOIN products p ON p.id = s.product_id
     WHERE s.routine_id = ?
@@ -19,6 +20,7 @@ export function createStepReader(db) {
         brand: step.brand,
         category: step.category,
         ingredients: JSON.parse(step.ingredients),
+        expires_on: step.expires_on,
         image_url: imageUrl(step.image),
       },
     }));
