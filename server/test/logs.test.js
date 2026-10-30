@@ -92,6 +92,77 @@ describe('/api/logs', () => {
     await save('2026-02-31', { skin_rating: 3 }).expect(400);
   });
 
+  describe('/calendar', () => {
+    async function calendar(month) {
+      const res = await api.get('/api/logs/calendar').query({ month }).expect(200);
+      return res.body;
+    }
+
+    async function createRoutine(stepCount) {
+      const { body: product } = await api.post('/api/products').send({ name: 'Toner' });
+      const { body: routine } = await api.post('/api/routines').send({ name: 'AM', period: 'AM' });
+      let steps;
+      for (let i = 0; i < stepCount; i += 1) {
+        const res = await api
+          .post(`/api/routines/${routine.id}/steps`)
+          .send({ product_id: product.id });
+        ({ steps } = res.body);
+      }
+      return { ...routine, steps };
+    }
+
+    it('rejects an invalid month', async () => {
+      await api.get('/api/logs/calendar').expect(400);
+      await api.get('/api/logs/calendar').query({ month: '2026-13' }).expect(400);
+      await api.get('/api/logs/calendar').query({ month: '2026-%' }).expect(400);
+    });
+
+    it('returns only that month, oldest first', async () => {
+      await save('2026-11-01', { skin_rating: 3 });
+      await save('2026-10-31', { skin_rating: 4 });
+      await save('2026-10-01', { notes: 'Start' });
+      await save('2026-09-30', { skin_rating: 2 });
+
+      assert.deepEqual(await calendar('2026-10'), [
+        { date: '2026-10-01', percent: 0, complete: false, skin_rating: null, notes: 'Start' },
+        { date: '2026-10-31', percent: 0, complete: false, skin_rating: 4, notes: null },
+      ]);
+    });
+
+    it('reports partial and finished days', async () => {
+      const { steps } = await createRoutine(2);
+      await api.put(`/api/checklist/2026-10-29/steps/${steps[0].id}`).send({ done: true });
+      await api.put(`/api/checklist/2026-10-30/steps/${steps[0].id}`).send({ done: true });
+      await api.put(`/api/checklist/2026-10-30/steps/${steps[1].id}`).send({ done: true });
+
+      assert.deepEqual(
+        (await calendar('2026-10')).map(({ date, percent, complete }) => [date, percent, complete]),
+        [
+          ['2026-10-29', 50, false],
+          ['2026-10-30', 100, true],
+        ],
+      );
+    });
+
+    it('keeps past percentages after the routine changes', async () => {
+      const routine = await createRoutine(2);
+      await api.put(`/api/checklist/2026-10-29/steps/${routine.steps[0].id}`).send({ done: true });
+
+      await api.delete(`/api/routines/${routine.id}`).expect(204);
+
+      assert.equal((await calendar('2026-10'))[0].percent, 50);
+    });
+
+    it('drops a day once everything on it is unticked', async () => {
+      const { steps } = await createRoutine(1);
+      await api.put(`/api/checklist/${TODAY}/steps/${steps[0].id}`).send({ done: true });
+
+      await api.put(`/api/checklist/${TODAY}/steps/${steps[0].id}`).send({ done: false });
+
+      assert.deepEqual(await calendar('2026-10'), []);
+    });
+  });
+
   describe('alongside the checklist', () => {
     let step;
 

@@ -30,6 +30,9 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - An unfinished today doesn't break the streak until the day is over.
 - The client sends today's date, because "today" depends on the browser's time zone. Fetching the checklist refreshes that date's stored result, so the UI only ever fetches today.
 - Today is the second tab; Routines stays the default page.
+- The percent counts the furthest routine per time of day, not every routine, so an untouched alternate can't hold a finished day below 100%. It rounds down, so 100% always means the day counted.
+- daily_logs also stores steps_done and steps_total, so the calendar keeps past percentages after routines change. Step 7's chart should read these, not step_completions.
+- The progress ring and calendar live on the Today tab rather than a fifth tab, so ticks update them in place.
 - Skin log entries live on daily_logs with the checklist, so saving always updates in place and clearing means setting both fields to null. Never delete a daily_logs row: it cascades to that day's ticks.
 - Past days can be logged or edited from the skin log, but future dates can't be picked.
 - Steps reorder with up/down buttons rather than drag and drop: no dependency, and works by keyboard.

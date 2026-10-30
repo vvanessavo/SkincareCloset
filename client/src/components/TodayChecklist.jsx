@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getChecklist, setStepDone } from '../api.js';
 import { localDate } from '../dates.js';
 import { ProductImage } from './ProductImage.jsx';
+import { ProgressCalendar } from './ProgressCalendar.jsx';
+import { ProgressRing } from './ProgressRing.jsx';
 
 const PERIODS = [
   { value: 'AM', label: 'Morning' },
@@ -89,11 +91,26 @@ export function TodayChecklist() {
 
         {checklist?.routines.length > 0 && (
           <>
-            <p className={checklist.day_complete ? 'day-status complete' : 'day-status'}>
-              {checklist.day_complete
-                ? 'All done for today.'
-                : 'Finish one routine for each time of day to count today.'}
-            </p>
+            <div className="panel today-progress">
+              <ProgressRing
+                percent={checklist.percent}
+                size={104}
+                strokeWidth={10}
+                label={`${checklist.percent}% of today's routine done`}
+              >
+                <span className="today-percent">{checklist.percent}%</span>
+              </ProgressRing>
+              <div>
+                <p className="today-steps">
+                  {checklist.steps_done} of {checklist.steps_total} steps done
+                </p>
+                <p className={checklist.day_complete ? 'day-status complete' : 'day-status'}>
+                  {checklist.day_complete
+                    ? 'All done for today.'
+                    : 'Finish one routine for each time of day to count today.'}
+                </p>
+              </div>
+            </div>
             <div className="period-columns">
               {PERIODS.map(({ value, label }) => {
                 const routines = checklist.routines.filter((routine) => routine.period === value);
@@ -135,6 +152,14 @@ export function TodayChecklist() {
               })}
             </div>
           </>
+        )}
+
+        {checklist && (
+          <ProgressCalendar
+            key={checklist.date}
+            today={checklist.date}
+            todayPercent={checklist.percent}
+          />
         )}
       </main>
     </>

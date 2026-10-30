@@ -15,7 +15,7 @@ function jsonResponse(status, body) {
 function mockApi(initial = [], { failSave } = {}) {
   let entries = initial;
   const fetchMock = vi.fn(async (url, options = {}) => {
-    if (!options.method) return jsonResponse(200, entries);
+    if (!options.method) return jsonResponse(200, url === '/api/logs' ? entries : []);
     if (failSave) return jsonResponse(400, { error: failSave });
 
     const date = url.split('/').at(-1);

@@ -60,6 +60,10 @@ export function listLogs() {
   return request('/logs');
 }
 
+export function getCalendar(month) {
+  return request(`/logs/calendar?month=${month}`);
+}
+
 export function saveLog(date, log) {
   return request(`/logs/${date}`, { method: 'PUT', body: log });
 }

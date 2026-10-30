@@ -1,17 +1,7 @@
 import { Router } from 'express';
 import { isValidDate, previousDay } from '../dates.js';
+import { summarizeProgress } from '../progress.js';
 import { createStepReader } from '../routineSteps.js';
-
-// A day counts once each time of day has a finished routine, so routines can alternate.
-function isDayComplete(routines) {
-  const periods = new Set(routines.map((routine) => routine.period));
-  return (
-    periods.size > 0 &&
-    [...periods].every((period) =>
-      routines.some((routine) => routine.period === period && routine.complete),
-    )
-  );
-}
 
 export function checklistRouter(db) {
   const router = Router();
@@ -37,7 +27,11 @@ export function checklistRouter(db) {
   const deleteCompletion = db.prepare(`
     DELETE FROM step_completions WHERE daily_log_id = ? AND routine_step_id = ?
   `);
-  const updateComplete = db.prepare('UPDATE daily_logs SET is_complete = ? WHERE log_date = ?');
+  const updateProgress = db.prepare(`
+    UPDATE daily_logs
+    SET is_complete = @isComplete, steps_done = @stepsDone, steps_total = @stepsTotal
+    WHERE log_date = @date
+  `);
   const selectCompleteDays = db
     .prepare(`
       SELECT log_date FROM daily_logs
@@ -77,12 +71,22 @@ export function checklistRouter(db) {
       })
       .filter((routine) => routine.steps.length > 0);
 
-    const dayComplete = isDayComplete(routines);
-    updateComplete.run(dayComplete ? 1 : 0, date);
+    // A day counts once each time of day has a finished routine, so routines can alternate.
+    const { stepsDone, stepsTotal, percent } = summarizeProgress(routines);
+    const dayComplete = percent === 100;
+    updateProgress.run({ isComplete: dayComplete ? 1 : 0, stepsDone, stepsTotal, date });
 
     // An unfinished today doesn't break the streak until the day is over.
     const streak = countStreakBefore(date) + (dayComplete ? 1 : 0);
-    return { date, routines, day_complete: dayComplete, streak };
+    return {
+      date,
+      routines,
+      day_complete: dayComplete,
+      steps_done: stepsDone,
+      steps_total: stepsTotal,
+      percent,
+      streak,
+    };
   }
 
   router.param('date', (req, res, next, date) => {

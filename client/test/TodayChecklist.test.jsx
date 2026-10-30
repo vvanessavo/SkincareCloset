@@ -12,6 +12,9 @@ function checklist(overrides = {}) {
   return {
     date: localDate(),
     day_complete: false,
+    steps_done: 2,
+    steps_total: 3,
+    percent: 66,
     streak: 4,
     routines: [
       {
@@ -31,8 +34,12 @@ function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), { status });
 }
 
-function mockApi({ get = () => jsonResponse(200, checklist()), put }) {
-  const fetchMock = vi.fn(async (url, options = {}) => (options.method ? put(url, options) : get()));
+function mockApi({ get = () => jsonResponse(200, checklist()), put, calendar = () => [] }) {
+  const fetchMock = vi.fn(async (url, options = {}) => {
+    if (options.method) return put(url, options);
+    if (url.startsWith('/api/logs/calendar')) return jsonResponse(200, calendar(url));
+    return get();
+  });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
 }
@@ -83,6 +90,186 @@ describe('TodayChecklist', () => {
     expect(screen.getByRole('heading', { name: 'Evening' })).toBeTruthy();
     expect(screen.getByLabelText('4-day streak')).toBeTruthy();
     expect(screen.getByText('Done')).toBeTruthy();
+  });
+
+  describe('progress ring', () => {
+    it("shows the percentage of today's routine", async () => {
+      mockApi({});
+      renderToday();
+
+      expect(await screen.findByRole('img', { name: "66% of today's routine done" })).toBeTruthy();
+      expect(screen.getByText('66%')).toBeTruthy();
+      expect(screen.getByText('2 of 3 steps done')).toBeTruthy();
+    });
+
+    it('updates after a tick', async () => {
+      const user = userEvent.setup();
+      mockApi({
+        put: () =>
+          jsonResponse(200, checklist({ percent: 100, steps_done: 3, day_complete: true })),
+      });
+      renderToday();
+
+      await user.click(await screen.findByRole('checkbox', { name: /Cleanser/ }));
+
+      expect(await screen.findByRole('img', { name: "100% of today's routine done" })).toBeTruthy();
+      expect(screen.getByText('3 of 3 steps done')).toBeTruthy();
+    });
+
+    it('draws no arc at zero', async () => {
+      mockApi({ get: () => jsonResponse(200, checklist({ percent: 0, steps_done: 0 })) });
+      renderToday();
+
+      const ring = await screen.findByRole('img', { name: "0% of today's routine done" });
+
+      expect(ring.querySelector('.progress-ring-fill')).toBeNull();
+    });
+
+    it('is hidden when there are no routines', async () => {
+      mockApi({ get: () => jsonResponse(200, checklist({ routines: [], percent: 0 })) });
+      renderToday();
+
+      await screen.findByText(/Add steps to a routine/);
+
+      expect(screen.queryByRole('img', { name: /today's routine/ })).toBeNull();
+    });
+  });
+
+  describe('progress calendar', () => {
+    const NOW = new Date(2026, 9, 30, 12);
+    const fixed = () => checklist({ date: '2026-10-30' });
+    const dayButton = (name) => screen.findByRole('button', { name });
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: NOW });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function mockMonths(months = {}) {
+      return mockApi({
+        get: () => jsonResponse(200, fixed()),
+        calendar: (url) => months[url.split('month=')[1]] ?? [],
+      });
+    }
+
+    const october = [
+      { date: '2026-10-28', percent: 100, complete: true, skin_rating: 4, notes: 'Calm' },
+      { date: '2026-10-29', percent: 50, complete: false, skin_rating: null, notes: null },
+    ];
+
+    it('lays out the month on the right weekdays', async () => {
+      mockMonths();
+      renderToday();
+
+      await screen.findByRole('heading', { name: 'October 2026' });
+      const rows = screen.getByRole('table').querySelectorAll('tbody tr');
+
+      expect(rows[0].cells[4].textContent).toBe('1');
+      expect(rows[0].cells[3].textContent).toBe('');
+      expect(rows[4].cells[6].textContent).toBe('31');
+    });
+
+    it('describes each day without relying on color', async () => {
+      mockMonths({ '2026-10': october });
+      renderToday();
+
+      expect(await dayButton(/Oct 28, 2026, 100% of routine done, skin rated 4 out of 5/)).toBeTruthy();
+      expect(await dayButton(/Oct 29, 2026, 50% of routine done/)).toBeTruthy();
+      expect(await dayButton(/Oct 27, 2026, no routine steps done/)).toBeTruthy();
+    });
+
+    it('fills finished days only', async () => {
+      mockMonths({ '2026-10': october });
+      renderToday();
+
+      const finished = await dayButton(/Oct 28, 2026, 100%/);
+      const partial = await dayButton(/Oct 29, 2026, 50%/);
+
+      expect(finished.classList.contains('complete')).toBe(true);
+      expect(partial.classList.contains('complete')).toBe(false);
+    });
+
+    it('shows a day when it is selected', async () => {
+      const user = userEvent.setup();
+      mockMonths({ '2026-10': october });
+      renderToday();
+
+      await user.click(await dayButton(/Oct 28, 2026, 100%/));
+
+      expect(screen.getByText(/100% of routine done · Skin 4\/5 Good/)).toBeTruthy();
+      expect(screen.getByText('Calm')).toBeTruthy();
+    });
+
+    it("moves today's ring with the checklist", async () => {
+      const user = userEvent.setup();
+      mockApi({
+        get: () => jsonResponse(200, fixed()),
+        put: () => jsonResponse(200, { ...fixed(), percent: 100, day_complete: true }),
+      });
+      renderToday();
+
+      expect(await dayButton(/Oct 30, 2026, 66%/)).toBeTruthy();
+      await user.click(screen.getByRole('checkbox', { name: /Cleanser/ }));
+
+      expect((await dayButton(/Oct 30, 2026, 100%/)).classList.contains('complete')).toBe(true);
+    });
+
+    it('moves between months but not past this one', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockMonths();
+      renderToday();
+
+      const next = await screen.findByRole('button', { name: 'Next month' });
+      expect(next.disabled).toBe(true);
+
+      await user.click(screen.getByRole('button', { name: 'Previous month' }));
+
+      expect(await screen.findByRole('heading', { name: 'September 2026' })).toBeTruthy();
+      expect(fetchMock.mock.calls.map(([url]) => url)).toContain(
+        '/api/logs/calendar?month=2026-09',
+      );
+      expect(next.disabled).toBe(false);
+    });
+
+    it('crosses the year boundary', async () => {
+      const user = userEvent.setup();
+      mockMonths();
+      renderToday();
+
+      const previous = await screen.findByRole('button', { name: 'Previous month' });
+      for (let i = 0; i < 10; i += 1) await user.click(previous);
+
+      expect(await screen.findByRole('heading', { name: 'December 2025' })).toBeTruthy();
+    });
+
+    it('disables future days', async () => {
+      vi.setSystemTime(new Date(2026, 9, 15, 12));
+      mockApi({
+        get: () => jsonResponse(200, checklist({ date: '2026-10-15' })),
+      });
+      renderToday();
+
+      expect((await dayButton(/Oct 16, 2026/)).disabled).toBe(true);
+      expect((await dayButton(/Oct 15, 2026/)).disabled).toBe(false);
+    });
+
+    it('keeps working when a month fails to load', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url) =>
+          url.startsWith('/api/logs/calendar')
+            ? new Response('', { status: 500 })
+            : jsonResponse(200, fixed()),
+        ),
+      );
+      renderToday();
+
+      expect(await screen.findByText(/Couldn't load this month/)).toBeTruthy();
+      expect(screen.getByRole('checkbox', { name: /Cleanser/ })).toBeTruthy();
+    });
   });
 
   it('leaves out a time of day with no routines', async () => {

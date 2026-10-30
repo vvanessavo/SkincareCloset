@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { isValidDate } from '../dates.js';
+import { percentDone } from '../progress.js';
 
 function parseLog(body) {
   const input = body ?? {};
@@ -28,6 +29,12 @@ export function logsRouter(db) {
     WHERE skin_rating IS NOT NULL OR notes IS NOT NULL
     ORDER BY log_date DESC
   `);
+  const selectMonth = db.prepare(`
+    SELECT log_date AS date, steps_done, steps_total, is_complete, skin_rating, notes
+    FROM daily_logs
+    WHERE log_date LIKE ? AND (steps_done > 0 OR skin_rating IS NOT NULL OR notes IS NOT NULL)
+    ORDER BY log_date
+  `);
   // Updates in place: the row also holds the day's checklist, and deleting it would cascade.
   const upsert = db.prepare(`
     INSERT INTO daily_logs (log_date, skin_rating, notes)
@@ -38,6 +45,23 @@ export function logsRouter(db) {
 
   router.get('/', (req, res) => {
     res.json(selectAll.all());
+  });
+
+  router.get('/calendar', (req, res) => {
+    const { month } = req.query;
+    if (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+      return res.status(400).json({ error: 'month must be a YYYY-MM month' });
+    }
+
+    res.json(
+      selectMonth.all(`${month}-%`).map((day) => ({
+        date: day.date,
+        percent: percentDone(day.steps_done, day.steps_total),
+        complete: day.is_complete === 1,
+        skin_rating: day.skin_rating,
+        notes: day.notes,
+      })),
+    );
   });
 
   router.put('/:date', (req, res) => {

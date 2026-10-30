@@ -15,6 +15,8 @@ const ADDED_COLUMNS = [
   ['products', 'image', 'TEXT'],
   ['products', 'catalog_code', 'TEXT'],
   ['daily_logs', 'is_complete', 'INTEGER NOT NULL DEFAULT 0'],
+  ['daily_logs', 'steps_done', 'INTEGER NOT NULL DEFAULT 0'],
+  ['daily_logs', 'steps_total', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 export function openDatabase(path) {

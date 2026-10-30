@@ -52,6 +52,9 @@ describe('/api/checklist', () => {
       date: TODAY,
       routines: [],
       day_complete: false,
+      steps_done: 0,
+      steps_total: 0,
+      percent: 0,
       streak: 0,
     });
   });
@@ -157,6 +160,65 @@ describe('/api/checklist', () => {
       await createRoutine('Empty', 'PM', 0);
 
       assert.equal((await tick(morning.steps[0])).body.day_complete, true);
+    });
+  });
+
+  describe('percent', () => {
+    it('counts ticked steps across the day', async () => {
+      const morning = await createRoutine('Morning', 'AM', 2);
+      await createRoutine('Evening', 'PM', 2);
+
+      const { body } = await tick(morning.steps[0]);
+
+      assert.equal(body.steps_done, 1);
+      assert.equal(body.steps_total, 4);
+      assert.equal(body.percent, 25);
+    });
+
+    it('reaches 100 on a finished alternate routine', async () => {
+      await createRoutine('Retinol night', 'PM', 3);
+      const acid = await createRoutine('Acid night', 'PM', 2);
+
+      await tick(acid.steps[0]);
+      const { body } = await tick(acid.steps[1]);
+
+      assert.equal(body.percent, 100);
+      assert.equal(body.day_complete, true);
+    });
+
+    it('follows the furthest routine of each time of day', async () => {
+      const retinol = await createRoutine('Retinol night', 'PM', 4);
+      const acid = await createRoutine('Acid night', 'PM', 2);
+
+      await tick(retinol.steps[0]);
+      const { body } = await tick(acid.steps[0]);
+
+      assert.equal(body.steps_done, 1);
+      assert.equal(body.steps_total, 2);
+      assert.equal(body.percent, 50);
+    });
+
+    it('rounds down, so 100 means everything is done', async () => {
+      const { steps } = await createRoutine('Big', 'AM', 3);
+
+      await tick(steps[0]);
+      await tick(steps[1]);
+
+      assert.equal((await checklist()).percent, 66);
+    });
+
+    it('is 100 exactly when the day counts', async () => {
+      const morning = await createRoutine('Morning', 'AM', 2);
+      const evening = await createRoutine('Evening', 'PM');
+
+      assert.equal((await tick(morning.steps[0])).body.percent, 33);
+      const almost = await tick(evening.steps[0]);
+      assert.equal(almost.body.percent, 66);
+      assert.equal(almost.body.day_complete, false);
+      const last = await tick(morning.steps[1]);
+
+      assert.equal(last.body.percent, 100);
+      assert.equal(last.body.day_complete, true);
     });
   });
 
