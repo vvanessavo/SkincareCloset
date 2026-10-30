@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App.jsx';
@@ -41,6 +41,7 @@ function sentRequests(fetchMock) {
 describe('App', () => {
   beforeEach(() => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    window.history.replaceState(null, '', '#products');
   });
 
   afterEach(() => {
@@ -150,6 +151,151 @@ describe('App', () => {
     expect(screen.getByLabelText('Name').value).toBe(toner.name);
   });
 
+  describe('pictures', () => {
+    const photo = new File(['bytes'], 'bottle.png', { type: 'image/png' });
+    const withPicture = { ...serum, image_url: '/api/uploads/serum.png' };
+
+    beforeEach(() => {
+      vi.stubGlobal('URL', Object.assign(URL, {
+        createObjectURL: vi.fn(() => 'blob:preview'),
+        revokeObjectURL: vi.fn(),
+      }));
+    });
+
+    function imageRequests(fetchMock) {
+      return fetchMock.mock.calls
+        .filter(([url, options]) => url.endsWith('/image') && options?.method)
+        .map(([url, options]) => ({ url, method: options.method, body: options.body }));
+    }
+
+    it('shows a picture, or a letter when there is none', async () => {
+      mockApi([withPicture, { ...serum, id: 2, name: 'toner', image_url: null }]);
+      const { container } = render(<App />);
+
+      const image = await screen.findByRole('img', { name: serum.name });
+      expect(image.getAttribute('src')).toBe(withPicture.image_url);
+      expect(container.querySelector('.placeholder').textContent).toBe('T');
+    });
+
+    it('falls back to the letter when a picture fails to load', async () => {
+      mockApi([withPicture]);
+      const { container } = render(<App />);
+
+      fireEvent.error(await screen.findByRole('img', { name: serum.name }));
+
+      expect(screen.queryByRole('img', { name: serum.name })).toBeNull();
+      expect(container.querySelector('.placeholder').textContent).toBe('V');
+    });
+
+    it('uploads a picture for a new product after creating it', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockApi([], () => jsonResponse(201, { ...serum, id: 7 }));
+      render(<App />);
+
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+      await user.type(screen.getByLabelText('Name'), 'Toner');
+      await user.upload(screen.getByLabelText('Picture'), photo);
+      expect(screen.getByRole('img', { name: 'Toner' }).getAttribute('src')).toBe('blob:preview');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
+      expect(imageRequests(fetchMock)).toEqual([
+        { url: '/api/products/7/image', method: 'PUT', body: photo },
+      ]);
+      expect(fetchMock.mock.calls.find(([url]) => url.endsWith('/image'))[1].headers).toEqual({
+        'Content-Type': 'image/png',
+      });
+    });
+
+    it('removes a picture when saving', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockApi([withPicture], () => jsonResponse(200, withPicture));
+      render(<App />);
+
+      await user.click(await screen.findByRole('button', { name: `Edit ${serum.name}` }));
+      await user.click(screen.getByRole('button', { name: 'Remove picture' }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
+      expect(imageRequests(fetchMock)).toEqual([
+        { url: `/api/products/${serum.id}/image`, method: 'DELETE', body: undefined },
+      ]);
+    });
+
+    it('leaves the picture alone when it was not changed', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockApi([withPicture], () => jsonResponse(200, withPicture));
+      render(<App />);
+
+      await user.click(await screen.findByRole('button', { name: `Edit ${serum.name}` }));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.queryByLabelText('Name')).toBeNull());
+      expect(imageRequests(fetchMock)).toEqual([]);
+    });
+
+    it('rejects an unsupported file before saving', async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      const fetchMock = mockApi([]);
+      render(<App />);
+
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+      await user.upload(
+        screen.getByLabelText('Picture'),
+        new File(['x'], 'bottle.heic', { type: 'image/heic' }),
+      );
+
+      expect(screen.getByRole('alert').textContent).toMatch(/JPEG, PNG or WebP/);
+      expect(imageRequests(fetchMock)).toEqual([]);
+    });
+
+    it('rejects a picture over the size limit', async () => {
+      const user = userEvent.setup();
+      mockApi([]);
+      render(<App />);
+
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+      await user.upload(
+        screen.getByLabelText('Picture'),
+        new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'huge.png', { type: 'image/png' }),
+      );
+
+      expect(screen.getByRole('alert').textContent).toMatch(/under 5 MB/);
+    });
+
+    it('closes the form and reports it when only the picture fails', async () => {
+      const user = userEvent.setup();
+      mockApi([], (url) =>
+        url.endsWith('/image')
+          ? jsonResponse(415, { error: 'Picture must be a JPEG, PNG or WebP image' })
+          : jsonResponse(201, { ...serum, id: 7, name: 'Toner' }),
+      );
+      render(<App />);
+
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+      await user.type(screen.getByLabelText('Name'), 'Toner');
+      await user.upload(screen.getByLabelText('Picture'), photo);
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect((await screen.findByRole('alert')).textContent).toMatch(
+        /^Toner was saved, but its picture wasn't/,
+      );
+      expect(screen.queryByLabelText('Name')).toBeNull();
+    });
+
+    it('asks before discarding a chosen picture', async () => {
+      const user = userEvent.setup();
+      mockApi([]);
+      render(<App />);
+
+      await user.click(screen.getByRole('button', { name: 'Add product' }));
+      await user.upload(screen.getByLabelText('Picture'), photo);
+      await user.click(screen.getByRole('button', { name: 'Routines' }));
+
+      expect(window.confirm).toHaveBeenCalledWith('Discard unsaved changes?');
+    });
+  });
+
   describe('unsaved changes', () => {
     const toner = { ...serum, id: 2, name: 'Toner' };
 
@@ -217,7 +363,7 @@ describe('App', () => {
       await user.click(screen.getByRole('button', { name: 'Routines' }));
 
       expect(screen.getByLabelText('Brand').value).toBe('Acme Labs');
-      expect(window.location.hash).toBe('');
+      expect(window.location.hash).toBe('#products');
     });
 
     it('opens the other product when discarding is confirmed', async () => {
@@ -289,12 +435,24 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Routines' })).toBeTruthy();
     });
 
-    it('falls back to products for an unknown hash', () => {
+    it('opens on routines by default, listed first', () => {
+      window.history.replaceState(null, '', '/');
+      mockApi([]);
+      render(<App />);
+
+      expect(screen.getByRole('heading', { name: 'Routines' })).toBeTruthy();
+      expect(screen.getAllByRole('button').slice(0, 2).map((tab) => tab.textContent)).toEqual([
+        'Routines',
+        'Products',
+      ]);
+    });
+
+    it('falls back to routines for an unknown hash', () => {
       window.history.replaceState(null, '', '#nope');
       mockApi([]);
       render(<App />);
 
-      expect(screen.getByRole('heading', { name: 'Product library' })).toBeTruthy();
+      expect(screen.getByRole('heading', { name: 'Routines' })).toBeTruthy();
     });
   });
 

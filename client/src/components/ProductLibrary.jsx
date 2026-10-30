@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createProduct, deleteProduct, listProducts, updateProduct } from '../api.js';
+import {
+  createProduct,
+  deleteProduct,
+  deleteProductImage,
+  listProducts,
+  updateProduct,
+  uploadProductImage,
+} from '../api.js';
 import { confirmDiscard } from '../unsavedChanges.js';
 import { ProductForm } from './ProductForm.jsx';
 import { ProductList } from './ProductList.jsx';
@@ -30,14 +37,22 @@ export function ProductLibrary() {
     setEditing(target);
   }
 
-  async function handleSave(product) {
-    if (editing.id) {
-      await updateProduct(editing.id, product);
-    } else {
-      await createProduct(product);
-    }
+  async function handleSave(product, image) {
+    const saved = editing.id
+      ? await updateProduct(editing.id, product)
+      : await createProduct(product);
+    // The product exists now, so a retry from the open form could create it twice.
     setEditing(null);
+
+    let imageError = null;
+    try {
+      if (image) await uploadProductImage(saved.id, image);
+      if (image === null) await deleteProductImage(saved.id);
+    } catch (err) {
+      imageError = `${saved.name} was saved, but its picture wasn't: ${err.message}`;
+    }
     await load();
+    if (imageError) setError(imageError);
   }
 
   async function handleDelete(product) {

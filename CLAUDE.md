@@ -28,4 +28,9 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - Removing a step or deleting a routine is a hard delete for now and cascades to step_completions. Revisit in step 4 (soft delete).
 - Steps reorder with up/down buttons rather than drag and drop: no dependency, and works by keyboard.
 - The current tab lives in the URL hash via replaceState, so reloads keep it and Back can't skip the unsaved-changes check.
+- Product pictures are uploads, stored in an uploads folder next to the database (gitignored, so back it up with the db). Type is checked from the bytes; JPEG, PNG and WebP only, 5 MB max.
+- Pictures aren't scraped from brand or retail sites; products without one show their first letter.
+- Upload is a separate raw request after the product saves, so no multipart dependency. If it fails the product stays saved and the form closes, so a retry can't create a duplicate.
+- Schema changes to existing tables go in openDatabase, because CREATE TABLE IF NOT EXISTS won't alter them.
+- Routines is the first tab and default page.
 - A routine can use the same product twice (e.g. double cleanse), and a period can have several routines.

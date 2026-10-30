@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toFormValues, toProductPayload } from '../productFields.js';
 import { useUnsavedChanges } from '../unsavedChanges.js';
+import { ProductImage } from './ProductImage.jsx';
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_MB = 5;
 
 const CATEGORIES = [
   'cleanser',
@@ -20,12 +24,43 @@ export function ProductForm({ product, onSave, onCancel }) {
   const [values, setValues] = useState(initialValues);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  // undefined keeps the current picture, a File replaces it, null removes it.
+  const [image, setImage] = useState(undefined);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
-  useUnsavedChanges(Object.keys(values).some((name) => values[name] !== initialValues[name]));
+  const isChanged = Object.keys(values).some((name) => values[name] !== initialValues[name]);
+  useUnsavedChanges(isChanged || image !== undefined);
+
+  useEffect(() => {
+    if (!image) return undefined;
+    const url = URL.createObjectURL(image);
+    setPreviewUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+      setPreviewUrl(null);
+    };
+  }, [image]);
+
+  const imageSrc = image === null ? null : (previewUrl ?? product?.image_url);
 
   function handleChange(event) {
     const { name, value } = event.target;
     setValues((current) => ({ ...current, [name]: value }));
+  }
+
+  function handleImageChange(event) {
+    const [file] = event.target.files;
+    event.target.value = '';
+    if (!file) return;
+
+    if (!IMAGE_TYPES.includes(file.type)) {
+      setError('Picture must be a JPEG, PNG or WebP image');
+    } else if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      setError(`Picture must be under ${MAX_IMAGE_MB} MB`);
+    } else {
+      setError(null);
+      setImage(file);
+    }
   }
 
   async function handleSubmit(event) {
@@ -33,7 +68,7 @@ export function ProductForm({ product, onSave, onCancel }) {
     setError(null);
     setSaving(true);
     try {
-      await onSave(toProductPayload(values));
+      await onSave(toProductPayload(values), image);
     } catch (err) {
       setError(err.message);
       setSaving(false);
@@ -43,6 +78,21 @@ export function ProductForm({ product, onSave, onCancel }) {
   return (
     <form className="panel product-form" onSubmit={handleSubmit}>
       <h2>{product ? `Edit ${product.name}` : 'Add product'}</h2>
+
+      <div className="image-field">
+        <ProductImage src={imageSrc} name={values.name || '?'} className="medium" />
+        <div className="image-controls">
+          <label>
+            Picture
+            <input type="file" accept={IMAGE_TYPES.join(',')} onChange={handleImageChange} />
+          </label>
+          {imageSrc && (
+            <button type="button" onClick={() => setImage(null)}>
+              Remove picture
+            </button>
+          )}
+        </div>
+      </div>
 
       <label>
         Name

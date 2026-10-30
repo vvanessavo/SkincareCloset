@@ -1,8 +1,12 @@
-async function request(path, { body, ...options } = {}) {
+async function request(path, { body, file, ...options } = {}) {
   const res = await fetch(`/api${path}`, {
     ...options,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
+    headers: file
+      ? { 'Content-Type': file.type }
+      : body
+        ? { 'Content-Type': 'application/json' }
+        : undefined,
+    body: file ?? (body ? JSON.stringify(body) : undefined),
   });
   if (res.status === 204) return null;
 
@@ -26,6 +30,14 @@ export function updateProduct(id, product) {
 
 export function deleteProduct(id) {
   return request(`/products/${id}`, { method: 'DELETE' });
+}
+
+export function uploadProductImage(id, file) {
+  return request(`/products/${id}/image`, { method: 'PUT', file });
+}
+
+export function deleteProductImage(id) {
+  return request(`/products/${id}/image`, { method: 'DELETE' });
 }
 
 export function listRoutines() {

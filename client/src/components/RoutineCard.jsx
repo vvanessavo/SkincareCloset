@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ProductImage } from './ProductImage.jsx';
 import { RoutineForm } from './RoutineForm.jsx';
 
 function productLabel(product) {
@@ -63,7 +64,8 @@ export function RoutineCard({
       {steps.length > 0 ? (
         <ol className="step-list">
           {steps.map((step, index) => (
-            <li key={step.id}>
+            <li key={step.id} className="step">
+              <ProductImage src={step.product.image_url} name={step.product.name} className="small" />
               <span className="step-name">{productLabel(step.product)}</span>
               <span className="step-actions">
                 <button

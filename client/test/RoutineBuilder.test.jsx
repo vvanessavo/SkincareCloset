@@ -91,6 +91,17 @@ describe('RoutineBuilder', () => {
     ).toEqual(['Cleanser', 'Serum (Acme)', 'Toner']);
   });
 
+  it('shows product pictures on steps', async () => {
+    const user = userEvent.setup();
+    const pictured = { ...serum, image_url: '/api/uploads/serum.png' };
+    mockApi({ routines: [{ ...evening, steps: [{ id: 200, product: pictured }] }] });
+    await openRoutines(user);
+
+    const image = await screen.findByRole('img', { name: serum.name });
+
+    expect(image.getAttribute('src')).toBe(pictured.image_url);
+  });
+
   it('shows empty states', async () => {
     const user = userEvent.setup();
     mockApi({ routines: [] });

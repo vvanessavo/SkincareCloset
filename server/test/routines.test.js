@@ -99,7 +99,13 @@ describe('/api/routines', () => {
     await addStep(cleanser.id);
     const step = await addStep(serum.id);
 
-    assert.deepEqual(step.product, { id: serum.id, name: 'Serum', brand: 'Acme', category: null });
+    assert.deepEqual(step.product, {
+      id: serum.id,
+      name: 'Serum',
+      brand: 'Acme',
+      category: null,
+      image_url: null,
+    });
     assert.deepEqual(await stepProductNames(), ['Cleanser', 'Serum']);
   });
 

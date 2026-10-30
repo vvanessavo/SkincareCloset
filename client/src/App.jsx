@@ -4,8 +4,8 @@ import { RoutineBuilder } from './components/RoutineBuilder.jsx';
 import { confirmDiscard } from './unsavedChanges.js';
 
 const PAGES = [
-  { name: 'Products', hash: '#products', Page: ProductLibrary },
   { name: 'Routines', hash: '#routines', Page: RoutineBuilder },
+  { name: 'Products', hash: '#products', Page: ProductLibrary },
 ];
 
 function pageFromHash() {

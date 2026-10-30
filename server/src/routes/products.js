@@ -1,4 +1,8 @@
-import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
+import { rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import express, { Router } from 'express';
+import { MAX_IMAGE_BYTES, detectImageExtension, imageUrl } from '../images.js';
 
 const TEXT_FIELDS = ['brand', 'category', 'notes'];
 const DATE_FIELDS = ['opened_on', 'expires_on'];
@@ -43,12 +47,16 @@ function parseProduct(body) {
   return { product, errors };
 }
 
-function serialize(row) {
-  return { ...row, ingredients: JSON.parse(row.ingredients) };
+function serialize({ image, ...row }) {
+  return { ...row, ingredients: JSON.parse(row.ingredients), image_url: imageUrl(image) };
 }
 
-export function productsRouter(db) {
+export function productsRouter(db, uploadsDir) {
   const router = Router();
+
+  function removeImageFile(filename) {
+    if (filename) rmSync(join(uploadsDir, filename), { force: true });
+  }
 
   const selectAll = db.prepare('SELECT * FROM products ORDER BY name COLLATE NOCASE, id');
   const selectOne = db.prepare('SELECT * FROM products WHERE id = ?');
@@ -62,6 +70,9 @@ export function productsRouter(db) {
         opened_on = @opened_on, expires_on = @expires_on, notes = @notes,
         updated_at = datetime('now')
     WHERE id = @id
+  `);
+  const updateImage = db.prepare(`
+    UPDATE products SET image = ?, updated_at = datetime('now') WHERE id = ?
   `);
   const remove = db.prepare('DELETE FROM products WHERE id = ?');
 
@@ -92,10 +103,38 @@ export function productsRouter(db) {
     res.json(serialize(selectOne.get(req.params.id)));
   });
 
+  // A new filename on each upload stops browsers showing a cached old picture.
+  router.put('/:id/image', express.raw({ type: () => true, limit: MAX_IMAGE_BYTES }), (req, res) => {
+    const row = selectOne.get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Product not found' });
+
+    const extension = detectImageExtension(req.body);
+    if (!extension) {
+      return res.status(415).json({ error: 'Picture must be a JPEG, PNG or WebP image' });
+    }
+
+    const filename = `${randomUUID()}.${extension}`;
+    writeFileSync(join(uploadsDir, filename), req.body);
+    updateImage.run(filename, row.id);
+    removeImageFile(row.image);
+    res.json(serialize(selectOne.get(row.id)));
+  });
+
+  router.delete('/:id/image', (req, res) => {
+    const row = selectOne.get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Product not found' });
+
+    updateImage.run(null, row.id);
+    removeImageFile(row.image);
+    res.json(serialize(selectOne.get(row.id)));
+  });
+
   router.delete('/:id', (req, res) => {
     try {
+      const row = selectOne.get(req.params.id);
       const { changes } = remove.run(req.params.id);
       if (!changes) return res.status(404).json({ error: 'Product not found' });
+      removeImageFile(row.image);
       res.status(204).end();
     } catch (err) {
       if (err.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {

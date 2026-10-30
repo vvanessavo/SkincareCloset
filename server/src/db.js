@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 
@@ -8,6 +8,9 @@ const schema = readFileSync(new URL('./schema.sql', import.meta.url), 'utf8');
 export const databasePath =
   process.env.DATABASE_PATH ?? fileURLToPath(new URL('../data/skincare.db', import.meta.url));
 
+// Next to the database, so a different database never shares pictures with this one.
+export const uploadsPath = join(dirname(databasePath), 'uploads');
+
 export function openDatabase(path) {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
 
@@ -15,5 +18,10 @@ export function openDatabase(path) {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(schema);
+
+  // CREATE TABLE IF NOT EXISTS leaves existing tables as they are.
+  const columns = db.pragma('table_info(products)').map((column) => column.name);
+  if (!columns.includes('image')) db.exec('ALTER TABLE products ADD COLUMN image TEXT');
+
   return db;
 }

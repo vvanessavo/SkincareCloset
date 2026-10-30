@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { imageUrl } from '../images.js';
 
 const PERIODS = ['AM', 'PM'];
 
@@ -32,7 +33,7 @@ export function routinesRouter(db) {
   const remove = db.prepare('DELETE FROM routines WHERE id = ?');
 
   const selectSteps = db.prepare(`
-    SELECT s.id, p.id AS product_id, p.name, p.brand, p.category
+    SELECT s.id, p.id AS product_id, p.name, p.brand, p.category, p.image
     FROM routine_steps s
     JOIN products p ON p.id = s.product_id
     WHERE s.routine_id = ?
@@ -54,9 +55,15 @@ export function routinesRouter(db) {
 
   // Array order is the step order, so positions stay internal.
   function serialize(routine) {
-    const steps = selectSteps.all(routine.id).map(({ id, product_id, name, brand, category }) => ({
-      id,
-      product: { id: product_id, name, brand, category },
+    const steps = selectSteps.all(routine.id).map((step) => ({
+      id: step.id,
+      product: {
+        id: step.product_id,
+        name: step.name,
+        brand: step.brand,
+        category: step.category,
+        image_url: imageUrl(step.image),
+      },
     }));
     return { ...routine, steps };
   }

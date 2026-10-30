@@ -1,3 +1,5 @@
+import { ProductImage } from './ProductImage.jsx';
+
 export function ProductList({ products, onEdit, onDelete }) {
   if (!products.length) {
     return <p className="empty">No products yet. Add the first one to start your library.</p>;
@@ -7,11 +9,14 @@ export function ProductList({ products, onEdit, onDelete }) {
     <ul className="product-list">
       {products.map((product) => (
         <li key={product.id} className="panel product-card">
-          <div className="product-heading">
-            <h2>{product.name}</h2>
-            {product.category && <span className="tag">{product.category}</span>}
+          <div className="product-summary">
+            <ProductImage src={product.image_url} name={product.name} className="large" />
+            <div className="product-heading">
+              <h2>{product.name}</h2>
+              {product.brand && <p className="brand">{product.brand}</p>}
+              {product.category && <span className="tag">{product.category}</span>}
+            </div>
           </div>
-          {product.brand && <p className="brand">{product.brand}</p>}
           {product.ingredients.length > 0 && (
             <p className="ingredients">{product.ingredients.join(', ')}</p>
           )}

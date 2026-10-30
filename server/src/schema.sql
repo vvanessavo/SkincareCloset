@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS products (
   opened_on   TEXT,                       -- YYYY-MM-DD
   expires_on  TEXT,                       -- YYYY-MM-DD
   notes       TEXT,
+  image       TEXT,                       -- filename in the uploads directory
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
