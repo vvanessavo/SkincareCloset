@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { checkConflicts, findActives } from '../src/conflicts.js';
+import { checkConflicts, findActives, isRinseOff } from '../src/conflicts.js';
 
 const WATER = ['water', 'glycerin', 'butylene glycol', 'niacinamide', 'panthenol'];
 
@@ -133,7 +133,60 @@ describe('trace amounts', () => {
   });
 });
 
+describe('isRinseOff', () => {
+  it('recognises cleansers by category or name', () => {
+    const rinseOff = [
+      { name: 'Gel', category: 'cleanser' },
+      { name: 'Low pH Good Morning Gel Cleanser', category: null },
+      { name: 'Gentle Black Deep Cleansing Oil' },
+      { name: 'Acne Face Wash' },
+      { name: 'Eau Micellaire' },
+    ];
+
+    for (const product of rinseOff) assert.equal(isRinseOff(product), true, product.name);
+  });
+
+  it('leaves products that stay on the skin', () => {
+    const leaveOn = [
+      { name: 'AHA/BHA Clarifying Treatment Toner', category: 'toner' },
+      { name: 'Retinol Serum', category: 'serum' },
+      { name: 'Sun Cream', category: 'sunscreen' },
+      { name: 'Clean Skin Moisturizer' },
+    ];
+
+    for (const product of leaveOn) assert.equal(isRinseOff(product), false, product.name);
+  });
+});
+
 describe('checkConflicts', () => {
+  it('skips cleansers, which rinse off', () => {
+    assert.deepEqual(
+      conflictIds([
+        product(1, ['retinol']),
+        { ...product(2, ['salicylic acid']), name: 'BHA Cleanser' },
+        { ...product(3, ['glycolic acid']), category: 'cleanser' },
+      ]),
+      [],
+    );
+  });
+
+  it('still checks a leave-on product next to a cleanser', () => {
+    assert.deepEqual(
+      conflictIds([
+        product(1, ['retinol']),
+        { ...product(2, ['salicylic acid']), name: 'BHA Cleanser' },
+        product(3, ['salicylic acid']),
+      ]),
+      ['retinoid-bha'],
+    );
+  });
+
+  it('checks cleansers for missing ingredient lists too', () => {
+    const { unchecked } = checkConflicts([{ ...product(1, []), name: 'Cleanser' }]);
+
+    assert.deepEqual(unchecked, [{ id: 1, name: 'Cleanser' }]);
+  });
+
   it('flags retinoid with vitamin C', () => {
     assert.deepEqual(
       conflictIds([product(1, ['retinol']), product(2, ['ascorbic acid'])]),

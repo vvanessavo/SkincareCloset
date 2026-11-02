@@ -51,11 +51,15 @@ function describeDay(date, day) {
   return parts.join(', ');
 }
 
-export function ProgressCalendar({ today, todayPercent }) {
-  const [month, setMonth] = useState(today.slice(0, 7));
+export function ProgressCalendar({ today, selected, onSelect, liveDay }) {
+  const [month, setMonth] = useState(selected.slice(0, 7));
   const [days, setDays] = useState([]);
   const [error, setError] = useState(null);
-  const [selected, setSelected] = useState(today);
+
+  // Opening a day in another month, such as going back from the 1st, shows that month.
+  useEffect(() => {
+    setMonth(selected.slice(0, 7));
+  }, [selected]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -74,13 +78,15 @@ export function ProgressCalendar({ today, todayPercent }) {
   }, [month]);
 
   const byDate = new Map(days.map((day) => [day.date, day]));
-  // Today comes from the checklist, so ticking a step moves its ring straight away.
-  byDate.set(today, {
-    ...byDate.get(today),
-    date: today,
-    percent: todayPercent,
-    complete: todayPercent === 100,
-  });
+  // The open day comes from the checklist, so ticking a step moves its ring straight away.
+  if (liveDay) {
+    byDate.set(liveDay.date, {
+      ...byDate.get(liveDay.date),
+      date: liveDay.date,
+      percent: liveDay.percent,
+      complete: liveDay.percent === 100,
+    });
+  }
 
   const selectedDay = byDate.get(selected);
   const rating = RATINGS.find((item) => item.value === selectedDay?.skin_rating);
@@ -132,7 +138,7 @@ export function ProgressCalendar({ today, todayPercent }) {
                       aria-current={date === today ? 'date' : undefined}
                       title={describeDay(date, byDate.get(date))}
                       disabled={date > today}
-                      onClick={() => setSelected(date)}
+                      onClick={() => onSelect(date)}
                     >
                       <ProgressRing
                         percent={byDate.get(date)?.percent ?? 0}
@@ -165,7 +171,7 @@ export function ProgressCalendar({ today, todayPercent }) {
 
       <p className="calendar-key">
         Each ring shows how much of that day's routine was done. A filled circle means the day
-        counted toward your streak.
+        counted toward your streak. Choose a day to see or fill it in.
       </p>
     </section>
   );

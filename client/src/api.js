@@ -48,8 +48,8 @@ export function searchCatalog(query, signal) {
   return request(`/catalog/search?q=${encodeURIComponent(query)}`, { signal });
 }
 
-export function getChecklist(date) {
-  return request(`/checklist?date=${date}`);
+export function getChecklist(date, isToday) {
+  return request(`/checklist?date=${date}${isToday ? '&today=1' : ''}`);
 }
 
 export function setStepDone(date, stepId, done) {

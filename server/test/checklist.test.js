@@ -37,8 +37,9 @@ describe('/api/checklist', () => {
     return api.put(`/api/checklist/${date}/steps/${step.id}`).send({ done }).expect(200);
   }
 
-  async function checklist(date = TODAY) {
-    const res = await api.get('/api/checklist').query({ date }).expect(200);
+  async function checklist(date = TODAY, today = date === TODAY) {
+    const query = today ? { date, today: 1 } : { date };
+    const res = await api.get('/api/checklist').query(query).expect(200);
     return res.body;
   }
 
@@ -55,6 +56,7 @@ describe('/api/checklist', () => {
       steps_done: 0,
       steps_total: 0,
       percent: 0,
+      recorded_percent: null,
       streak: 0,
     });
   });
@@ -314,6 +316,70 @@ describe('/api/checklist', () => {
       await api.delete(`/api/routines/${routine.id}/steps/${routine.steps[1].id}`).expect(200);
 
       assert.equal((await checklist()).streak, 1);
+    });
+  });
+
+  describe('past days', () => {
+    const YESTERDAY = '2026-10-29';
+
+    it('can be ticked late and then count toward the streak', async () => {
+      const { steps } = await createRoutine('Morning', 'AM');
+
+      const late = await tick(steps[0], YESTERDAY);
+      assert.equal(late.body.day_complete, true);
+
+      assert.equal((await checklist()).streak, 1);
+    });
+
+    it('are not rewritten by viewing them after routines change', async () => {
+      const routine = await createRoutine('Morning', 'AM', 2);
+      await tick(routine.steps[0], YESTERDAY);
+      await tick(routine.steps[1], YESTERDAY);
+
+      await api.post(`/api/routines/${routine.id}/steps`).send({ product_id: product.id });
+      const viewed = await checklist(YESTERDAY);
+
+      assert.equal(viewed.percent, 66);
+      assert.equal(viewed.recorded_percent, 100);
+      assert.equal((await checklist()).streak, 1);
+    });
+
+    it('are re-scored with current routines once ticked again', async () => {
+      const routine = await createRoutine('Morning', 'AM', 2);
+      await tick(routine.steps[0], YESTERDAY);
+      await tick(routine.steps[1], YESTERDAY);
+      const { body: added } = await api
+        .post(`/api/routines/${routine.id}/steps`)
+        .send({ product_id: product.id });
+
+      const res = await tick(added.steps[2], YESTERDAY);
+
+      assert.equal(res.body.percent, 100);
+      assert.equal(res.body.recorded_percent, 100);
+    });
+
+    it('have no recorded result until something is saved', async () => {
+      await createRoutine('Morning', 'AM');
+
+      assert.equal((await checklist(YESTERDAY)).recorded_percent, null);
+    });
+  });
+
+  describe('cleansers', () => {
+    it('are not checked for conflicts, since they rinse off', async () => {
+      const { body: retinol } = await api
+        .post('/api/products')
+        .send({ name: 'Retinol Cream', ingredients: ['retinol'] });
+      const { body: cleanser } = await api
+        .post('/api/products')
+        .send({ name: 'Low pH Gel Cleanser', ingredients: ['water', 'betaine salicylate'] });
+      const { body: routine } = await api.post('/api/routines').send({ name: 'PM', period: 'PM' });
+      await api.post(`/api/routines/${routine.id}/steps`).send({ product_id: retinol.id });
+      const { body } = await api
+        .post(`/api/routines/${routine.id}/steps`)
+        .send({ product_id: cleanser.id });
+
+      assert.deepEqual(body.conflicts, []);
     });
   });
 

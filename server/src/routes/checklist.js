@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { isValidDate, previousDay } from '../dates.js';
-import { summarizeProgress } from '../progress.js';
+import { percentDone, summarizeProgress } from '../progress.js';
 import { createStepReader } from '../routineSteps.js';
 
 export function checklistRouter(db) {
@@ -27,6 +27,9 @@ export function checklistRouter(db) {
   const deleteCompletion = db.prepare(`
     DELETE FROM step_completions WHERE daily_log_id = ? AND routine_step_id = ?
   `);
+  const selectRecorded = db.prepare(
+    'SELECT steps_done, steps_total FROM daily_logs WHERE log_date = ?',
+  );
   const updateProgress = db.prepare(`
     UPDATE daily_logs
     SET is_complete = @isComplete, steps_done = @stepsDone, steps_total = @stepsTotal
@@ -57,8 +60,8 @@ export function checklistRouter(db) {
     return streak;
   }
 
-  // Past days keep their stored flag, so later routine edits can't rewrite the streak.
-  function buildChecklist(date) {
+  // Only today and days you tick are re-scored, so viewing an old day never rewrites it.
+  function buildChecklist(date, { rescore }) {
     const doneSteps = new Set(selectDoneSteps.all(date));
     const routines = selectRoutines
       .all()
@@ -74,7 +77,10 @@ export function checklistRouter(db) {
     // A day counts once each time of day has a finished routine, so routines can alternate.
     const { stepsDone, stepsTotal, percent } = summarizeProgress(routines);
     const dayComplete = percent === 100;
-    updateProgress.run({ isComplete: dayComplete ? 1 : 0, stepsDone, stepsTotal, date });
+    if (rescore) {
+      updateProgress.run({ isComplete: dayComplete ? 1 : 0, stepsDone, stepsTotal, date });
+    }
+    const recorded = selectRecorded.get(date);
 
     // An unfinished today doesn't break the streak until the day is over.
     const streak = countStreakBefore(date) + (dayComplete ? 1 : 0);
@@ -85,6 +91,8 @@ export function checklistRouter(db) {
       steps_done: stepsDone,
       steps_total: stepsTotal,
       percent,
+      // What was saved for the day, which can differ once routines have changed since.
+      recorded_percent: recorded ? percentDone(recorded.steps_done, recorded.steps_total) : null,
       streak,
     };
   }
@@ -95,10 +103,11 @@ export function checklistRouter(db) {
   });
 
   // The date comes from the client, because "today" depends on the browser's time zone.
+  // today=1 marks it as the live day, which picks up routine edits made since the last tick.
   router.get('/', (req, res) => {
     const { date } = req.query;
     if (!isValidDate(date)) return res.status(400).json({ error: 'date must be a YYYY-MM-DD date' });
-    res.json(buildChecklist(date));
+    res.json(buildChecklist(date, { rescore: req.query.today === '1' }));
   });
 
   router.put('/:date/steps/:stepId', (req, res) => {
@@ -107,7 +116,7 @@ export function checklistRouter(db) {
     if (!selectStep.get(req.params.stepId)) return res.status(404).json({ error: 'Step not found' });
 
     setStepDone(req.params.date, req.params.stepId, done);
-    res.json(buildChecklist(req.params.date));
+    res.json(buildChecklist(req.params.date, { rescore: true }));
   });
 
   return router;

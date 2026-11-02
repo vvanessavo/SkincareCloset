@@ -39,7 +39,7 @@ function mockApi({ get = () => jsonResponse(200, checklist()), put, calendar = (
     if (options.method) return put(url, options);
     if (url.startsWith('/api/logs/calendar')) return jsonResponse(200, calendar(url));
     if (url === '/api/products') return jsonResponse(200, []);
-    return get();
+    return get(url);
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
@@ -78,7 +78,7 @@ describe('TodayChecklist', () => {
 
     await screen.findByRole('checkbox', { name: /Cleanser/ });
 
-    expect(fetchMock.mock.calls[0][0]).toBe(`/api/checklist?date=${localDate()}`);
+    expect(fetchMock.mock.calls[0][0]).toBe(`/api/checklist?date=${localDate()}&today=1`);
   });
 
   it('shows steps by time of day with the streak', async () => {
@@ -284,6 +284,186 @@ describe('TodayChecklist', () => {
 
     expect(await screen.findByText(/Expired \d+ days ago/)).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: /Cleanser/ })).toBeTruthy();
+  });
+
+  describe('past days', () => {
+    const NOW = new Date(2026, 9, 30, 12);
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: NOW });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    // Answers with whichever day was asked for, as the real API does.
+    function mockDays({ put, recorded = {} } = {}) {
+      return mockApi({
+        get: (url) => {
+          const date = new URL(url, 'http://x').searchParams.get('date');
+          return jsonResponse(
+            200,
+            checklist({ date, recorded_percent: recorded[date] ?? null, streak: 4 }),
+          );
+        },
+        put: put ?? ((url) => jsonResponse(200, checklist({ date: url.split('/')[3] }))),
+      });
+    }
+
+    const checklistUrls = (fetchMock) =>
+      fetchMock.mock.calls.map(([url]) => url).filter((url) => url.startsWith('/api/checklist?'));
+
+    it('goes back a day without asking to re-score it', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockDays();
+      renderToday();
+
+      await user.click(await screen.findByRole('button', { name: '‹ Previous day' }));
+
+      expect(await screen.findByRole('heading', { name: /Oct 29, 2026/ })).toBeTruthy();
+      expect(checklistUrls(fetchMock)).toEqual([
+        '/api/checklist?date=2026-10-30&today=1',
+        '/api/checklist?date=2026-10-29',
+      ]);
+      expect(screen.getByRole('status').textContent).toMatch(/You're filling in .*Oct 29, 2026/);
+      expect(screen.queryByLabelText(/day streak/)).toBeNull();
+    });
+
+    it('ticks a step for the day that is open', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockDays();
+      renderToday();
+
+      await user.click(await screen.findByRole('button', { name: '‹ Previous day' }));
+      await screen.findByRole('heading', { name: /Oct 29, 2026/ });
+      await user.click(screen.getByRole('checkbox', { name: /Cleanser/ }));
+
+      await waitFor(() =>
+        expect(fetchMock.mock.calls.find(([, options]) => options?.method)[0]).toBe(
+          '/api/checklist/2026-10-29/steps/10',
+        ),
+      );
+    });
+
+    it('cannot go past today', async () => {
+      const user = userEvent.setup();
+      mockDays();
+      renderToday();
+
+      const next = await screen.findByRole('button', { name: 'Next day ›' });
+      expect(next.disabled).toBe(true);
+
+      await user.click(screen.getByRole('button', { name: '‹ Previous day' }));
+      await user.click(await screen.findByRole('button', { name: 'Next day ›' }));
+
+      expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Next day ›' }).disabled).toBe(true);
+    });
+
+    it('returns to today', async () => {
+      const user = userEvent.setup();
+      mockDays();
+      renderToday();
+
+      await user.click(await screen.findByRole('button', { name: '‹ Previous day' }));
+      await user.click(screen.getByRole('button', { name: '‹ Previous day' }));
+      await user.click(await screen.findByRole('button', { name: 'Back to today' }));
+
+      expect(await screen.findByRole('heading', { name: 'Today' })).toBeTruthy();
+      expect(screen.getByLabelText('4-day streak')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Back to today' })).toBeNull();
+    });
+
+    it('opens a day chosen in the calendar', async () => {
+      const user = userEvent.setup();
+      mockDays();
+      renderToday();
+
+      await user.click(await screen.findByRole('button', { name: /Oct 12, 2026/ }));
+
+      expect(await screen.findByRole('heading', { name: /Oct 12, 2026/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Oct 12, 2026/ }).getAttribute('aria-pressed')).toBe(
+        'true',
+      );
+    });
+
+    it("shows the open day's month in the calendar", async () => {
+      vi.setSystemTime(new Date(2026, 10, 1, 12));
+      const user = userEvent.setup();
+      mockDays();
+      renderToday();
+
+      await screen.findByRole('heading', { name: 'November 2026' });
+      await user.click(screen.getByRole('button', { name: '‹ Previous day' }));
+
+      expect(await screen.findByRole('heading', { name: 'October 2026' })).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: /Oct 31, 2026/ }).getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
+
+    it('explains when routines have changed since the day was saved', async () => {
+      const user = userEvent.setup();
+      mockDays({ recorded: { '2026-10-29': 100 } });
+      renderToday();
+
+      await user.click(await screen.findByRole('button', { name: '‹ Previous day' }));
+
+      expect(await screen.findByText(/this day was saved at 100%/)).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Oct 29, 2026, 100%/ })).toBeTruthy();
+    });
+
+    it('says nothing extra when the saved result matches', async () => {
+      const user = userEvent.setup();
+      mockDays({ recorded: { '2026-10-29': 66 } });
+      renderToday();
+
+      await user.click(await screen.findByRole('button', { name: '‹ Previous day' }));
+      await screen.findByRole('heading', { name: /Oct 29, 2026/ });
+
+      expect(screen.queryByText(/saved at/)).toBeNull();
+    });
+
+    it('follows today past midnight unless a past day is open', async () => {
+      const user = userEvent.setup();
+      const fetchMock = mockDays();
+      renderToday();
+      await screen.findByRole('heading', { name: 'Today' });
+
+      vi.setSystemTime(new Date(2026, 9, 31, 0, 10));
+      await act(async () => {
+        window.dispatchEvent(new Event('focus'));
+      });
+      await waitFor(() =>
+        expect(checklistUrls(fetchMock).at(-1)).toBe('/api/checklist?date=2026-10-31&today=1'),
+      );
+
+      await user.click(screen.getByRole('button', { name: '‹ Previous day' }));
+      await screen.findByRole('heading', { name: /Oct 30, 2026/ });
+      vi.setSystemTime(new Date(2026, 10, 1, 0, 10));
+      await act(async () => {
+        window.dispatchEvent(new Event('focus'));
+      });
+
+      expect(screen.getByRole('heading', { name: /Oct 30, 2026/ })).toBeTruthy();
+    });
+  });
+
+  it('keeps an expiry tag next to the name so long names can wrap', async () => {
+    const expired = step(10, 'Relief Sun: Rice + Probiotics SPF50+');
+    expired.product.expires_on = '2020-01-01';
+    const [morning] = checklist().routines;
+    mockApi({
+      get: () => jsonResponse(200, checklist({ routines: [{ ...morning, steps: [expired] }] })),
+    });
+    renderToday();
+
+    const tag = await screen.findByText(/Expired \d+ days ago/);
+
+    expect(tag.closest('.check-text').querySelector('.check-name').textContent).toBe(
+      'Relief Sun: Rice + Probiotics SPF50+',
+    );
   });
 
   it('leaves out a time of day with no routines', async () => {

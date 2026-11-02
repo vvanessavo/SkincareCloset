@@ -1,9 +1,4 @@
-import { localDate } from './dates.js';
-
-function addDays(date, offset) {
-  const [year, month, day] = date.split('-').map(Number);
-  return localDate(new Date(year, month - 1, day + offset));
-}
+import { addDays } from './dates.js';
 
 function shortDate(date) {
   const [year, month, day] = date.split('-').map(Number);

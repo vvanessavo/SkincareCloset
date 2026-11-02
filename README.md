@@ -7,7 +7,7 @@ A personal web app for building skincare routines, ticking them off each day and
 ## Features
 
 - **Routines.** Build morning and evening routines from your products, in order. You can have several per time of day, such as a retinol night and an exfoliating night.
-- **Today.** Tick off each step, with a progress ring, a streak counter and a monthly calendar of past days.
+- **Today.** Tick off each step, with a progress ring, a streak counter and a monthly calendar. Missed a night? Go back and fill in a past day.
 - **Skin log.** Rate your skin from 1 to 5 and add a note, for today or a past day, with charts of rating and routine completion over 30 or 90 days.
 - **Product library.** Add products by hand or search a local copy of [Open Beauty Facts](https://world.openbeautyfacts.org). Add a photo, track opened and expiry dates, and get warnings 30 days before a product expires.
 - **Ingredient conflict checker.** Warns when one routine combines a retinoid with vitamin C, an AHA or a BHA.
@@ -91,9 +91,11 @@ docs/screenshots/       Images used in this README
 
 **A day counts when each time of day has one finished routine.** Many people alternate evening routines, for example retinol one night and acids the next. So the percentage follows the routine you've got furthest with for each time of day, not every routine. That means 100% always means the day counted toward your streak, and finishing one alternate never reads as half done.
 
-**The browser decides what "today" is.** The server can't know the user's time zone, so the app sends its local date. A tab left open overnight moves to the new day when you return to it, unless you have unsaved changes.
+**The browser decides what "today" is.** The server can't know the user's time zone, so the app sends its local date. A tab left open overnight moves to the new day when you return to it, unless you have unsaved changes or a past day open.
 
-**Conflict warnings are deliberately narrow.** The rules were tuned against the roughly 39,000 products in Open Beauty Facts, where a first version flagged far too much. Ingredient lists run from most to least, so exfoliating acids and vitamin C in the last third of a full list count as traces. Retinoids always count, because they work at around 0.1% and are often listed late. Several lookalikes are excluded: sunscreen filters such as `ethylhexyl salicylate`, `BHA` written alone (on labels usually the preservative butylated hydroxyanisole), and pH adjusters such as `citric acid`. Warnings compare different products within one routine, never block anything, and name products with no ingredient list as not checked.
+**Looking at a past day never changes it.** Only today, and days where you tick a step, are scored again. If you fill in a past day after changing your routines, it's scored against your current routines, and the page says so when that differs from what was saved.
+
+**Conflict warnings are deliberately narrow.** The rules were tuned against the roughly 39,000 products in Open Beauty Facts, where a first version flagged far too much. Ingredient lists run from most to least, so exfoliating acids and vitamin C in the last third of a full list count as traces. Retinoids always count, because they work at around 0.1% and are often listed late. Several lookalikes are excluded: sunscreen filters such as `ethylhexyl salicylate`, `BHA` written alone (on labels usually the preservative butylated hydroxyanisole), and pH adjusters such as `citric acid`. Cleansers are skipped, because they're rinsed off before their actives can interact with a retinoid. Warnings compare different products within one routine, never block anything, and name products with no ingredient list as not checked.
 
 **Product search uses a local copy.** Open Beauty Facts allows one live API call per real barcode scan and blocks scraping, so search runs on its daily export, imported into SQLite. Choosing a result only fills in the form for you to check, because the data is written by volunteers and the conflict checker relies on it. Its photo is copied to `uploads/` when you save.
 
@@ -114,6 +116,5 @@ The sample products from `npm run seed` list key ingredients only, written by ha
 ## Limitations
 
 - Conflict warnings are a general guide, not medical advice. They cover three pairings and depend on accurate ingredient lists.
-- The checklist only covers today. Past days can have skin log entries added, but not routine ticks.
 - Expiry dates are entered by hand. Nothing works them out from when a product was opened.
 - There are no accounts. The app is meant to run locally for one person.

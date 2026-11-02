@@ -67,10 +67,19 @@ export function findActives(ingredients) {
   return found;
 }
 
+// Cleansers are rinsed off within a minute, so their actives barely reach the skin.
+const RINSE_OFF = /\b(cleanser|cleansing|face wash|facial wash|foaming wash|micellai?re?)\b/;
+
+export function isRinseOff(product) {
+  return RINSE_OFF.test(normalizeSearchText(`${product.category ?? ''} ${product.name}`));
+}
+
 // Compares different products only: one formula with both actives was made to work together.
 export function checkConflicts(products) {
   const unique = [...new Map(products.map((product) => [product.id, product])).values()];
-  const scanned = unique.map((product) => ({ product, actives: findActives(product.ingredients) }));
+  const scanned = unique
+    .filter((product) => !isRinseOff(product))
+    .map((product) => ({ product, actives: findActives(product.ingredients) }));
 
   const conflicts = [];
   for (const { id, actives, title, advice } of RULES) {

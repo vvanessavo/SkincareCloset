@@ -443,6 +443,43 @@ textarea {
   accent-color: var(--accent);
 }
 
+.check-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.5rem;
+  min-width: 0;
+}
+
+.check-name {
+  overflow-wrap: anywhere;
+}
+
+.day-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: -0.5rem 0 1rem;
+}
+
+.day-nav button {
+  padding: 0.25rem 0.7rem;
+  font-size: 0.9rem;
+}
+
+.day-nav button:last-child {
+  margin-left: auto;
+}
+
+.past-day-notice {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
 .check.done .check-name {
   color: var(--muted);
   text-decoration: line-through;
