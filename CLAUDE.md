@@ -9,7 +9,7 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - [x] 5. Skin log (daily note + 1-5 rating)
 - [x] 6. Ingredient conflict checker (retinol + vitamin C, retinol + AHA/BHA) with unit tests
 - [x] 7. Expiry warnings + progress chart (Chart.js)
-- [ ] 8. README with setup, screenshots, design decisions
+- [x] 8. README with setup, screenshots, design decisions
 
 ## Rules
 - Do one roadmap step per request. Don't start the next step unprompted.
