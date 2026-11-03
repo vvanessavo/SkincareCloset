@@ -1,22 +1,22 @@
 /* Colors were checked for contrast: text pairs reach 4.5:1 in both themes. */
 :root {
   color-scheme: light dark;
-  --bg: #faf6f2;
+  --bg: #f4f7fb;
   --surface: #ffffff;
-  --surface-soft: #f5ede8;
-  --text: #2e2328;
-  --muted: #76656c;
-  --border: #eee3dd;
-  --accent: #a4485f;
+  --surface-soft: #eaf0f7;
+  --text: #1c2633;
+  --muted: #5c6878;
+  --border: #dfe7f0;
+  --accent: #2f6db0;
   --accent-text: #ffffff;
-  --accent-soft: #f7e4e9;
-  --accent-ink: #8a3249;
+  --accent-soft: #e2edf9;
+  --accent-ink: #22548c;
   --logo: #2f6db0;
   --error: #a3312a;
   --error-bg: #fbeceb;
   --warning-bg: #fbf1da;
   --warning-border: #e9cf8e;
-  --shadow: 0 1px 2px rgb(74 40 52 / 0.04), 0 6px 20px rgb(74 40 52 / 0.06);
+  --shadow: 0 1px 2px rgb(24 44 72 / 0.05), 0 6px 20px rgb(24 44 72 / 0.07);
   --radius: 18px;
   --radius-small: 12px;
   --font-body: 'DM Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -25,16 +25,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1c1618;
-    --surface: #262022;
-    --surface-soft: #30282b;
-    --text: #f4ecee;
-    --muted: #b6a6ac;
-    --border: #3a3033;
-    --accent: #e8a6b7;
-    --accent-text: #2b1219;
-    --accent-soft: #3d2a30;
-    --accent-ink: #f0bcc9;
+    --bg: #11171f;
+    --surface: #1a222d;
+    --surface-soft: #232d3a;
+    --text: #e9eef5;
+    --muted: #9fadbe;
+    --border: #2c3746;
+    --accent: #8cbcec;
+    --accent-text: #0d1b2b;
+    --accent-soft: #1d3048;
+    --accent-ink: #b4d4f4;
     --logo: #8cbcec;
     --error: #f0a8a2;
     --error-bg: #3a2220;
@@ -125,7 +125,7 @@ button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
-  box-shadow: 0 2px 8px rgb(164 72 95 / 0.25);
+  box-shadow: 0 2px 8px rgb(47 109 176 / 0.25);
 }
 
 button.primary:hover:not(:disabled) {
@@ -294,7 +294,7 @@ a {
 
 .product-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgb(74 40 52 / 0.05), 0 12px 28px rgb(74 40 52 / 0.1);
+  box-shadow: 0 2px 4px rgb(24 44 72 / 0.06), 0 12px 28px rgb(24 44 72 / 0.12);
 }
 
 .product-summary {

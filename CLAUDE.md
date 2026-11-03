@@ -50,7 +50,7 @@ Full-stack web app: React + Vite (client/), Node/Express + SQLite (server/).
 - Upload is a separate raw request after the product saves, so no multipart dependency. If it fails the product stays saved and the form closes, so a retry can't create a duplicate.
 - Schema changes to existing tables go in openDatabase, because CREATE TABLE IF NOT EXISTS won't alter them.
 - Routines is the first tab and default page.
-- Look: warm ivory and rose palette, Fraunces for headings and DM Sans for text. Fonts are bundled with @fontsource so the app works offline. Every text color pair was checked for 4.5:1 contrast in both themes; recheck if the palette changes.
+- Look: cool blue palette matching the fountain logo, Fraunces for headings and DM Sans for text. Fonts are bundled with @fontsource so the app works offline. Every text color pair was checked for 4.5:1 contrast in both themes; recheck if the palette changes.
 - Add product can search a local copy of Open Beauty Facts (`npm run import:catalog` in server/, table catalog_products). Never call their API for search: they block scraping and limit it to one call per real scan.
 - Search only fills in the form. Nothing saves until Save, because the data is volunteer-written and step 6 will rely on the ingredients.
 - A chosen result's picture is copied to uploads on save, from the URL in the catalog only, never one sent by the client.
