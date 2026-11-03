@@ -30,10 +30,22 @@ export function App() {
     <div className="app">
       <div className="topbar">
         <p className="wordmark">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <svg className="wordmark-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+            {/* Jets rise from the centre and arc out into the upper bowl. */}
+            <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M12 10.5V4.2" />
+              <path d="M12 4.2C9.4 4.2 7.6 5.9 7 9.6" />
+              <path d="M12 4.2c2.6 0 4.4 1.7 5 5.4" />
+            </g>
+            <circle cx="5.6" cy="14.2" r="0.9" fill="currentColor" />
+            <circle cx="18.4" cy="14.2" r="0.9" fill="currentColor" />
+            <circle cx="4.9" cy="16.6" r="0.75" fill="currentColor" />
+            <circle cx="19.1" cy="16.6" r="0.75" fill="currentColor" />
+            <path fill="currentColor" d="M6.5 10.4h11c-.4 1.6-2.7 2.7-5.5 2.7s-5.1-1.1-5.5-2.7Z" />
+            <path fill="currentColor" d="M11.2 12.9h1.6l.5 5.1h-2.6Z" />
             <path
               fill="currentColor"
-              d="M12 2.5c3.6 4.3 6.5 7.8 6.5 11.4a6.5 6.5 0 0 1-13 0c0-3.6 2.9-7.1 6.5-11.4Z"
+              d="M2.6 18h18.8c-.5 1.9-2.4 3.2-4.6 3.2H7.2c-2.2 0-4.1-1.3-4.6-3.2Z"
             />
           </svg>
           Skincare Tracker
