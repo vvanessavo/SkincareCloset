@@ -3,6 +3,7 @@ import { ProductLibrary } from './components/ProductLibrary.jsx';
 import { RoutineBuilder } from './components/RoutineBuilder.jsx';
 import { SkinLog } from './components/SkinLog.jsx';
 import { TodayChecklist } from './components/TodayChecklist.jsx';
+import { DemoBanner } from './components/DemoBanner.jsx';
 import { confirmDiscard } from './unsavedChanges.js';
 
 const PAGES = [
@@ -28,6 +29,7 @@ export function App() {
 
   return (
     <div className="app">
+      {import.meta.env.MODE === 'demo' && <DemoBanner />}
       <div className="topbar">
         <p className="wordmark">
           <svg className="wordmark-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">

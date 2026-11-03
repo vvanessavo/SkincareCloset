@@ -5,16 +5,21 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:demo": "vite --mode demo",
     "build": "vite build",
+    "build:demo": "vite build --mode demo",
+    "preview:demo": "vite preview --mode demo",
     "preview": "vite preview",
     "test": "vitest run"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
     "@fontsource-variable/fraunces": "^5.3.0",
+    "buffer": "^6.0.3",
     "chart.js": "^4.6.1",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "sql.js": "^1.15.2"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.3",

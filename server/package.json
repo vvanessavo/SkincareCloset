@@ -7,7 +7,8 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/seed.js",
-    "import:catalog": "node src/importCatalog.js"
+    "import:catalog": "node src/importCatalog.js",
+    "export:demo-catalog": "node src/exportDemoCatalog.js"
   },
   "type": "module",
   "dependencies": {

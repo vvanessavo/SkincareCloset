@@ -1,5 +1,14 @@
+// The public demo has no server, so its requests go to a copy of the API in the browser.
+async function send(url, init) {
+  if (import.meta.env.MODE === 'demo') {
+    const { demoFetch } = await import('demo-transport');
+    return demoFetch(url, init);
+  }
+  return fetch(url, init);
+}
+
 async function request(path, { body, file, ...options } = {}) {
-  const res = await fetch(`/api${path}`, {
+  const res = await send(`/api${path}`, {
     ...options,
     headers: file
       ? { 'Content-Type': file.type }

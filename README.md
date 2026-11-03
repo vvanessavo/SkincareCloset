@@ -2,6 +2,8 @@
 
 A personal web app for building skincare routines, ticking them off each day and seeing whether your skin is improving. It warns about expired products and about ingredient combinations that commonly irritate skin.
 
+**[Try the live demo](https://vvanessavo.github.io/SkincareCloset/)**: it's filled with sample data, saves only in your browser, and has a reset button.
+
 ![Today: progress ring, checklist and calendar](docs/screenshots/today.png)
 
 ## Features
@@ -105,11 +107,25 @@ docs/screenshots/       Images used in this README
 
 **Products used in a routine can't be deleted.** The API returns 409 until the product is removed from every routine.
 
+## The live demo
+
+The demo on GitHub Pages has no server. It runs the real Express routers from `server/src/routes/` inside the browser, against SQLite compiled to WebAssembly ([sql.js](https://sql.js.org)), so the conflict checker, streaks and validation behave exactly as they do locally. Small stand-ins in `client/src/demo/shims/` cover the parts of Express, Node and better-sqlite3 the routers use.
+
+Each visitor gets their own copy, seeded with sample data dated around their today and saved in IndexedDB. Product search uses a small slice of Open Beauty Facts in `client/src/demo/catalog.json`, made with `npm run export:demo-catalog` in `server/`, without its photos.
+
+```sh
+cd client
+npm run dev:demo      # the demo with hot reload
+npm run build:demo    # what GitHub Actions publishes
+```
+
 ## Data and licensing
 
 Product search uses [Open Beauty Facts](https://world.openbeautyfacts.org). Its data is under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/) and its photos under Creative Commons Attribution-ShareAlike ([details](https://world.openbeautyfacts.org/data)). The app credits it in the footer and links each imported product to its source page.
 
 Because the catalog is stored in your local database, publishing the app with that data could bring in ODbL's share-alike terms, so check those before deploying it publicly.
+
+The demo's catalog slice in `client/src/demo/catalog.json` is Open Beauty Facts data, so it's under the ODbL too.
 
 The sample products from `npm run seed` list key ingredients only, written by hand, and should be checked against real labels. The screenshots use made-up data and plain generated product photos.
 
