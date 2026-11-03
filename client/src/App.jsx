@@ -28,18 +28,29 @@ export function App() {
 
   return (
     <div className="app">
-      <nav className="app-nav">
-        {PAGES.map((page) => (
-          <button
-            key={page.name}
-            type="button"
-            aria-current={page === current ? 'page' : undefined}
-            onClick={() => handleSelect(page)}
-          >
-            {page.name}
-          </button>
-        ))}
-      </nav>
+      <div className="topbar">
+        <p className="wordmark">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12 2.5c3.6 4.3 6.5 7.8 6.5 11.4a6.5 6.5 0 0 1-13 0c0-3.6 2.9-7.1 6.5-11.4Z"
+            />
+          </svg>
+          Skincare Tracker
+        </p>
+        <nav className="app-nav">
+          {PAGES.map((page) => (
+            <button
+              key={page.name}
+              type="button"
+              aria-current={page === current ? 'page' : undefined}
+              onClick={() => handleSelect(page)}
+            >
+              {page.name}
+            </button>
+          ))}
+        </nav>
+      </div>
       <current.Page />
       <footer className="app-footer">
         Search results and marked products come from{' '}

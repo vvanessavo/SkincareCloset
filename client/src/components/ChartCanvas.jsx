@@ -46,6 +46,8 @@ export function ChartCanvas({ buildConfig, label }) {
   }, []);
 
   useEffect(() => {
+    // Canvas text doesn't inherit CSS, so axis labels are given the page's font.
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
     const chart = new Chart(canvasRef.current, buildConfig(readColors()));
     return () => chart.destroy();
   }, [buildConfig, themeVersion]);

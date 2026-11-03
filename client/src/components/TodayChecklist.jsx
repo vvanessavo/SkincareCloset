@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getChecklist, setStepDone } from '../api.js';
 import { addDays, formatDate, localDate } from '../dates.js';
 import { ExpiryTag } from './ExpiryTag.jsx';
+import { PeriodIcon } from './PeriodIcon.jsx';
 import { ProductImage } from './ProductImage.jsx';
 import { ProgressCalendar } from './ProgressCalendar.jsx';
 import { ProgressRing } from './ProgressRing.jsx';
@@ -164,7 +165,10 @@ export function TodayChecklist() {
                 if (!routines.length) return null;
                 return (
                   <section key={value}>
-                    <h2 className="period-heading">{label}</h2>
+                    <h2 className="period-heading">
+                      <PeriodIcon period={value} />
+                      {label}
+                    </h2>
                     <ul className="routine-list">
                       {routines.map((routine) => (
                         <li key={routine.id} className="panel routine-card">

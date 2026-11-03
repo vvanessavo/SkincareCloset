@@ -9,6 +9,7 @@ import {
   reorderRoutineSteps,
   updateRoutine,
 } from '../api.js';
+import { PeriodIcon } from './PeriodIcon.jsx';
 import { RoutineCard } from './RoutineCard.jsx';
 import { RoutineForm } from './RoutineForm.jsx';
 
@@ -96,7 +97,10 @@ export function RoutineBuilder() {
               const periodRoutines = routines.filter((routine) => routine.period === value);
               return (
                 <section key={value}>
-                  <h2 className="period-heading">{label}</h2>
+                  <h2 className="period-heading">
+                    <PeriodIcon period={value} />
+                    {label}
+                  </h2>
                   {periodRoutines.length > 0 ? (
                     <ul className="routine-list">
                       {periodRoutines.map((routine) => (

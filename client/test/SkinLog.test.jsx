@@ -9,6 +9,8 @@ const charts = vi.hoisted(() => []);
 
 vi.mock('chart.js', () => {
   class Chart {
+    static defaults = { font: {} };
+
     static register() {}
 
     constructor(canvas, config) {
